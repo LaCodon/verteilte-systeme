@@ -1,0 +1,20 @@
+syntax = "proto3";
+package smkvs;
+
+option go_package = "pkg/rpc";
+
+message VoteRequest {
+  int32 term = 1;
+  int32 candidateId = 2;
+  int32 lastLogIndex = 3;
+  int32 lastLogTerm = 4;
+}
+
+message VoteResponse {
+  int32 term = 1;
+  bool voteGranted = 2;
+}
+
+service Node {
+  rpc RequestVote (VoteRequest) returns (VoteResponse) {};
+}
