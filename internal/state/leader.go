@@ -1,7 +1,7 @@
 package state
 
 type LeaderState struct {
-	*State
+	State
 	nextIndex  map[int]int
 	matchIndex map[int]int
 }

@@ -1,55 +1,103 @@
 package state
 
-import "github.com/LaCodon/verteilte-systeme/pkg/logentry"
+import (
+	"github.com/LaCodon/verteilte-systeme/pkg/redolog"
+)
+
+type NodeState int
+
+const (
+	Follower  NodeState = iota + 1
+	Candidate NodeState = iota + 1
+	Leader    NodeState = iota + 1
+)
+
+var DefaultPersistentState *PersistentState
 
 type PersistentState struct {
-	*State
-	currentTerm int32
-	voteFor     int32
-	log         []*logentry.Element
+	State
+	CurrentSate NodeState
+	CurrentTerm int32
+	VoteFor     *int32
+	Log         []*redolog.Element
+}
+
+func (s *PersistentState) GetLastLogIndexFragile() int32 {
+	return int32(len(s.Log) - 1)
+}
+
+func (s *PersistentState) UpdateFragile(n NodeState, t int32, v *int32) {
+	s.CurrentSate = n
+	s.CurrentTerm = t
+	s.VoteFor = v
+}
+
+func (s *PersistentState) GetLastLogTermFragile() int32 {
+	length := len(s.Log)
+	lastIndex := length - 1
+
+	if length == 0 {
+		return 0
+	}
+
+	return s.Log[lastIndex].Term
+}
+
+func (s *PersistentState) SetCurrentState(n NodeState) {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+
+	s.CurrentSate = n
 }
 
 func (s *PersistentState) SetCurrentTerm(t int32) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 
-	s.currentTerm = t
+	s.CurrentTerm = t
 }
 
-func (s *PersistentState) SetVoteFor(v int32) {
+func (s *PersistentState) SetVoteFor(v *int32) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 
-	s.voteFor = v
+	s.VoteFor = v
 }
 
-func (s *PersistentState) AddToLog(l *logentry.Element) {
+func (s *PersistentState) AddToLog(l *redolog.Element) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 
-	s.log = append(s.log, l)
+	s.Log = append(s.Log, l)
+}
+
+func (s *PersistentState) GetCurrentState() NodeState {
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
+
+	return s.CurrentSate
 }
 
 func (s *PersistentState) GetCurrentTerm() int32 {
 	s.Mutex.RLock()
 	defer s.Mutex.RUnlock()
 
-	return s.currentTerm
+	return s.CurrentTerm
 }
 
-func (s *PersistentState) GetVoteFor() int32 {
+func (s *PersistentState) GetVoteFor() *int32 {
 	s.Mutex.RLock()
 	defer s.Mutex.RUnlock()
 
-	return s.voteFor
+	return s.VoteFor
 }
 
-func (s *PersistentState) GetLogElement(i int) logentry.Element {
+func (s *PersistentState) GetLogElement(i int) redolog.Element {
 	s.Mutex.RLock()
 	defer s.Mutex.RUnlock()
 
 	// create copy to prevent manipulation
-	r := *s.log[i]
+	r := *s.Log[i]
 	return r
 }
 
@@ -57,5 +105,5 @@ func (s *PersistentState) GetLogLength() int {
 	s.Mutex.RLock()
 	defer s.Mutex.RUnlock()
 
-	return len(s.log)
+	return len(s.Log)
 }

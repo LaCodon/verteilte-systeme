@@ -1,7 +1,7 @@
 package state
 
 type VolatileState struct {
-	*State
+	State
 	commitIndex int32
 	lastApplied int32
 }
