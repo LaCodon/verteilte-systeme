@@ -22,16 +22,20 @@ type PersistentState struct {
 	Log         []*redolog.Element
 }
 
+// Makes no use of RW-Mutex.
 func (s *PersistentState) GetLastLogIndexFragile() int32 {
 	return int32(len(s.Log) - 1)
 }
 
+// UpdateFragile updates all relevant persistent state variables.
+// Makes no use of RW-Mutex.
 func (s *PersistentState) UpdateFragile(n NodeState, t int32, v *int32) {
 	s.CurrentSate = n
 	s.CurrentTerm = t
 	s.VoteFor = v
 }
 
+// Makes no use of RW-Mutex.
 func (s *PersistentState) GetLastLogTermFragile() int32 {
 	length := len(s.Log)
 	lastIndex := length - 1
