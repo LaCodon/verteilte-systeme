@@ -4,12 +4,16 @@ import (
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/urfave/cli/v2"
+	"math/rand"
 	"os"
+	"time"
 )
 
 var Version = "dev-build"
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	app := &cli.App{
 		Name:        "smKVS",
 		Usage:       "Schmidt-Maier-Key-Value-Store",
@@ -32,6 +36,14 @@ func main() {
 				EnvVars:     []string{"SMKVS_PORT"},
 				Value:       36000,
 				Destination: &config.Default.LocalPort,
+			},
+			&cli.IntFlag{
+				Name:        "node-id",
+				Aliases:     []string{"n"},
+				Usage:       "ID of the current node",
+				EnvVars:     []string{"SMKVS_NODE_ID"},
+				Value:       rand.Int(),
+				Destination: &config.Default.NodeId,
 			},
 		},
 		Authors: []*cli.Author{
