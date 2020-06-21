@@ -6,7 +6,10 @@ func init() {
 	DefaultPersistentState = &PersistentState{
 		CurrentSate: Follower,
 		CurrentTerm: 1,
-		VoteFor:     nil,
-		Log:         []*redolog.Element{},
+		VoteFor: struct {
+			Id   *int32
+			Term int32
+		}{Id: nil, Term: 1},
+		Log: []*redolog.Element{},
 	}
 }

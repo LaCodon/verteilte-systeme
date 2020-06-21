@@ -16,7 +16,7 @@ func ConnectToNodes(ips []string) (cs ClientSet) {
 			continue
 		}
 		cs = append(cs, rpc.NewNodeClient(conn))
-		lg.Log.Info("Successfully connected to node '%s'", target)
+		lg.Log.Debugf("Successfully connected to node '%s'", target)
 	}
 
 	return

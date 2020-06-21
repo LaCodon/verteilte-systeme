@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"math/rand"
 	"time"
@@ -10,11 +12,11 @@ import (
 var Heartbeat chan bool
 
 // BeFollower starts watching incoming heartbeats
-func BeFollower() {
+func BeFollower(ctx context.Context) {
 	lg.Log.Info("Started waiting for heartbeats")
 
 	running := true
-	for running {
+	for running && ctx.Err() == nil {
 		// random int between 150 and 300
 		timeout := time.Duration(rand.Intn(1000)+1000) * time.Millisecond
 		select {
@@ -24,7 +26,7 @@ func BeFollower() {
 			lg.Log.Info("Heartbeat timed out")
 			if BeCandidate() {
 				running = false
-				lg.Log.Debug("I'm master now!")
+				lg.Log.Infof("I'm master now for term %d", state.DefaultPersistentState.GetCurrentTerm())
 			}
 		}
 	}

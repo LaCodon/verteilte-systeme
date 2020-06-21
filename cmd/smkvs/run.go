@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
@@ -26,15 +27,25 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	go func() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func(c context.Context) {
 		// main loop
-		for {
+		for c.Err() == nil {
 			switch state.DefaultPersistentState.GetCurrentState() {
 			case state.Follower:
-				client.BeFollower()
+				client.BeFollower(c)
 			case state.Leader:
-				client.BeLeader()
+				client.BeLeader(c)
 			}
+		}
+	}(ctx)
+
+	go func() {
+		// print current state
+		for {
+			time.Sleep(2000 * time.Millisecond)
+			lg.Log.Infof("Current state: %d in term %d", state.DefaultPersistentState.CurrentSate, state.DefaultPersistentState.CurrentTerm)
 		}
 	}()
 
@@ -45,8 +56,10 @@ func run(c *cli.Context) error {
 
 	lg.Log.Info("Stopping service...")
 
-	// Stop routines
-	client.EndHeartbeats()
+	// Stop routines and RPC server
+	cancel()
+	// leave some time for go routines to stop
+	time.Sleep(1000 * time.Millisecond)
 	server.RpcServer.GracefulStop()
 
 	time.Sleep(1 * time.Second)

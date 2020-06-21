@@ -18,8 +18,11 @@ type PersistentState struct {
 	State
 	CurrentSate NodeState
 	CurrentTerm int32
-	VoteFor     *int32
-	Log         []*redolog.Element
+	VoteFor     struct {
+		Id   *int32
+		Term int32
+	}
+	Log []*redolog.Element
 }
 
 // Makes no use of RW-Mutex.
@@ -29,10 +32,11 @@ func (s *PersistentState) GetLastLogIndexFragile() int32 {
 
 // UpdateFragile updates all relevant persistent state variables.
 // Makes no use of RW-Mutex.
-func (s *PersistentState) UpdateFragile(n NodeState, t int32, v *int32) {
-	s.CurrentSate = n
-	s.CurrentTerm = t
-	s.VoteFor = v
+func (s *PersistentState) UpdateFragile(newState NodeState, newTerm int32, newVoteFor *int32) {
+	s.CurrentSate = newState
+	s.CurrentTerm = newTerm
+	s.VoteFor.Term = newTerm
+	s.VoteFor.Id = newVoteFor
 }
 
 // Makes no use of RW-Mutex.
@@ -68,13 +72,6 @@ func (s *PersistentState) SetCurrentTerm(t int32) {
 	s.CurrentTerm = t
 }
 
-func (s *PersistentState) SetVoteFor(v *int32) {
-	s.Mutex.Lock()
-	defer s.Mutex.Unlock()
-
-	s.VoteFor = v
-}
-
 func (s *PersistentState) AddToLog(l *redolog.Element) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
@@ -94,13 +91,6 @@ func (s *PersistentState) GetCurrentTerm() int32 {
 	defer s.Mutex.RUnlock()
 
 	return s.CurrentTerm
-}
-
-func (s *PersistentState) GetVoteFor() *int32 {
-	s.Mutex.RLock()
-	defer s.Mutex.RUnlock()
-
-	return s.VoteFor
 }
 
 func (s *PersistentState) GetLogElement(i int) redolog.Element {
