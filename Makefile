@@ -7,4 +7,7 @@ run:
 	go build -o bin/smkvs ./cmd/smkvs/
 	./scripts/run.sh
 
+build:
+	go build -o bin/smkvs ./cmd/smkvs/
+
 proto: pkg/rpc/service.pb.go

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
@@ -15,11 +16,27 @@ func run(c *cli.Context) error {
 	lg.Log.Infof("Hello, I'm node with id %d", config.Default.NodeId)
 	lg.Log.Infof("Configured peers: %s", config.Default.PeerNodes)
 
+	// start as follower
+	state.DefaultPersistentState.SetCurrentState(state.Follower)
+
+	// the heartbeat channel tracks heartbeats from master node
+	client.Heartbeat = make(chan bool, 1)
+
 	if err := server.StartListen(); err != nil {
 		return err
 	}
 
-	client.BeginElectionTimeout()
+	go func() {
+		// main loop
+		for {
+			switch state.DefaultPersistentState.GetCurrentState() {
+			case state.Follower:
+				client.BeFollower()
+			case state.Leader:
+				client.BeLeader()
+			}
+		}
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
