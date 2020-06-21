@@ -12,19 +12,26 @@ import (
 // elect requests votes from other clients to make this node the new leader.
 // Returns true if this node has been elected
 func BeCandidate() bool {
-	lg.Log.Debugf("Starting new election")
+	lg.Log.Info("Starting new election")
+
+	{ // transition to candidate state
+		state.DefaultPersistentState.Mutex.Lock()
+
+		id := int32(config.Default.NodeId)
+		state.DefaultPersistentState.UpdateFragile(state.Candidate, state.DefaultPersistentState.CurrentTerm+1, &id)
+
+		state.DefaultPersistentState.Mutex.Unlock()
+	}
 
 	electing := true
-	clientCount := len(config.Default.PeerNodes.Value())
+	nodeCount := len(config.Default.PeerNodes.Value()) + 1
 	clients := ConnectToNodes(config.Default.PeerNodes.Value())
-	incomingVotes := make(chan *rpc.VoteResponse, clientCount)
-	voteCount := 0
+	incomingVotes := make(chan *rpc.VoteResponse, nodeCount)
+	// start with voteCount = 1 because this node votes for itself
+	voteCount := 1
 	// timeout for RequestVote RPCs
 	timeout := time.Duration(1000) * time.Millisecond
 	timedOut := make(chan time.Time)
-
-	state.DefaultPersistentState.IncrementCurrentTerm()
-	state.DefaultPersistentState.SetCurrentState(state.Candidate)
 
 	state.DefaultPersistentState.Mutex.RLock()
 	r := &rpc.VoteRequest{
@@ -47,7 +54,7 @@ func BeCandidate() bool {
 					incomingVotes <- resp
 				}
 			} else {
-				lg.Log.Warningf("Got error from client.RequestVote call: %s", err)
+				lg.Log.Debugf("Got error from client.RequestVote call: %s", err)
 			}
 		}(c)
 	}
@@ -60,19 +67,19 @@ func BeCandidate() bool {
 	for electing {
 		select {
 		case <-Heartbeat:
-			lg.Log.Debug("Got heartbeat, reverting to follower state")
+			lg.Log.Info("Got heartbeat, reverting to follower state")
 			state.DefaultPersistentState.SetCurrentState(state.Follower)
 			return false
 		case <-timedOut:
-			lg.Log.Debug("Split votes / timed out waiting for votes")
-			// start new election term
-			return BeCandidate()
+			lg.Log.Info("Split votes / timed out waiting for votes")
+			state.DefaultPersistentState.SetCurrentState(state.Follower)
+			return false
 		case resp := <-incomingVotes:
-			lg.Log.Debugf("Got vote response: %s", resp)
+			lg.Log.Infof("Got vote response: %s", resp)
 			if resp.VoteGranted {
 				voteCount++
 
-				if voteCount >= clientCount/2 {
+				if voteCount > nodeCount/2 {
 					state.DefaultPersistentState.SetCurrentState(state.Leader)
 					electing = false
 				}

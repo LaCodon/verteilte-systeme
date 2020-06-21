@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+var Log *logging.Logger
+
 func init() {
 	var format = logging.MustStringFormatter(`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`)
 
@@ -12,5 +14,7 @@ func init() {
 	stdOutFormatted := logging.NewBackendFormatter(stdOut, format)
 
 	logging.SetBackend(stdOutFormatted)
-	//logging.SetLevel(logging.INFO, "")
+	logging.SetLevel(logging.INFO, "")
+
+	Log = logging.MustGetLogger("smkvs")
 }
