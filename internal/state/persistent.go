@@ -54,6 +54,13 @@ func (s *PersistentState) SetCurrentState(n NodeState) {
 	s.CurrentSate = n
 }
 
+func (s *PersistentState) IncrementCurrentTerm() {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+
+	s.CurrentTerm++
+}
+
 func (s *PersistentState) SetCurrentTerm(t int32) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
