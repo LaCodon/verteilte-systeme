@@ -25,13 +25,9 @@ func BeCandidate() bool {
 
 	electing := true
 	nodeCount := len(config.Default.PeerNodes.Value()) + 1
-	clients := ConnectToNodes(config.Default.PeerNodes.Value())
 	incomingVotes := make(chan *rpc.VoteResponse, nodeCount)
 	// start with voteCount = 1 because this node votes for itself
 	voteCount := 1
-	// timeout for RequestVote RPCs
-	timeout := time.Duration(1000) * time.Millisecond
-	timedOut := make(chan time.Time)
 
 	state.DefaultPersistentState.Mutex.RLock()
 	r := &rpc.VoteRequest{
@@ -45,9 +41,9 @@ func BeCandidate() bool {
 	lg.Log.Debugf("Requesting vote for term %d, candidID %d, lIndex %d, lTerm %d", r.Term, r.CandidateId, r.LastLogIndex, r.LastLogTerm)
 
 	// send vote requests to all other nodes
-	for _, c := range clients {
+	for _, c := range DefaultClientSet {
 		go func(client rpc.NodeClient) {
-			ctx, _ := context.WithTimeout(context.Background(), timeout)
+			ctx, _ := context.WithTimeout(context.Background(), config.Default.RequestVoteTimeout)
 			resp, err := client.RequestVote(ctx, r)
 			if err == nil {
 				if resp.VoteGranted {
@@ -56,11 +52,13 @@ func BeCandidate() bool {
 			} else {
 				lg.Log.Debugf("Got error from client.RequestVote call: %s", err)
 			}
-		}(c)
+		}(c.NodeClient)
 	}
 
+	// make timeout alias because otherwise it would be restarted every loop round in the electing for loop below
+	timedOut := make(chan time.Time)
 	go func() {
-		t := <-time.After(timeout)
+		t := <-time.After(config.Default.RequestVoteTimeout)
 		timedOut <- t
 	}()
 

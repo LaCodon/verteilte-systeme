@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
@@ -17,11 +18,18 @@ func run(c *cli.Context) error {
 	lg.Log.Infof("Hello, I'm node with id %d", config.Default.NodeId)
 	lg.Log.Infof("Configured peers: %s", config.Default.PeerNodes)
 
+	if config.Default.HeartbeatInterval < config.Default.AppendEntriesTimeout {
+		return fmt.Errorf("heartbeat intveral has to be greater than append entries timeout")
+	}
+
 	// start as follower
 	state.DefaultPersistentState.SetCurrentState(state.Follower)
 
 	// the heartbeat channel tracks heartbeats from master node
 	client.Heartbeat = make(chan bool, 1)
+
+	// initial connect to other nodes
+	client.ConnectToNodes(config.Default.PeerNodes.Value())
 
 	if err := server.StartListen(); err != nil {
 		return err
