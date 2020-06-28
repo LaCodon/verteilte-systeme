@@ -15,4 +15,7 @@ type Config struct {
 	// HeartbeatTimeout is the interval in which the leader sends heartbeats to the followers (default: 100 ms)
 	HeartbeatTimeout time.Duration
 	NodeId           int
+
+	// LogFile holds the filename where the log entries are saved
+	Logfile string
 }

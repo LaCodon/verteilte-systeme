@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
@@ -16,6 +17,9 @@ import (
 func run(c *cli.Context) error {
 	lg.Log.Infof("Hello, I'm node with id %d", config.Default.NodeId)
 	lg.Log.Infof("Configured peers: %s", config.Default.PeerNodes)
+
+	config.Default.Logfile = fmt.Sprintf("log%d.txt",config.Default.NodeId)
+	lg.Log.Infof("My log file: %s", config.Default.PeerNodes)
 
 	// start as follower
 	state.DefaultPersistentState.SetCurrentState(state.Follower)

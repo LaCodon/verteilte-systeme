@@ -18,10 +18,23 @@ message VoteResponse {
 message AppendEntriesRequest {
   int32 term = 1;
   int32 leaderId = 2;
+  int32 prevLogIndex = 3;
+  int32 prevLogTerm = 4;
+  repeated LogEntry entries = 5;
+  int32 leaderCommit = 6;
 }
 
 message AppendEntriesResponse {
   int32 term = 1;
+  bool success = 2;
+}
+
+message LogEntry{
+  int32 Index = 1;
+  int32 Term = 2;
+  string Key = 3;
+  int32 Action = 4;
+  string Value = 5;
 }
 
 service Node {

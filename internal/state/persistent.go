@@ -51,6 +51,10 @@ func (s *PersistentState) GetLastLogTermFragile() int32 {
 	return s.Log[lastIndex].Term
 }
 
+func (s *PersistentState) ContainsLogElementFragile(index int32, term int32) bool {
+	return s.Log[index].Term == term
+}
+
 func (s *PersistentState) SetCurrentState(n NodeState) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
@@ -108,3 +112,24 @@ func (s *PersistentState) GetLogLength() int {
 
 	return len(s.Log)
 }
+
+func (s *PersistentState) UpdateAndAppendLog(elements []*redolog.Element) {
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
+
+	//remove all inconsistent elements
+	for _, element := range elements {
+		if len(s.Log) > int(element.Index) {
+			if element.Term != s.Log[element.Index].Term {
+				s.Log = s.Log[:element.Index]
+				break
+			}
+		}
+	}
+
+	//add all new elements
+	s.Log = append(s.Log, elements...)
+
+}
+
+

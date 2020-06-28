@@ -2,6 +2,15 @@ package state
 
 type VolatileState struct {
 	State
-	commitIndex int32
-	lastApplied int32
+	CommitIndex int32
+	LastApplied int32
+}
+
+var DefaultVolatileState *VolatileState
+
+
+
+// Makes no use of RW-Mutex.
+func (s *VolatileState) IncreaseLastAppliedFragile() {
+	s.LastApplied++
 }
