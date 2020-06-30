@@ -27,7 +27,7 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	// send heartbeat to other go routines
 	client.Heartbeat <- true
 
-	// check lastLogIndex and Term
+	// check PrevLogIndex and Term
 	if !state.DefaultPersistentState.ContainsLogElementFragile(ar.PrevLogIndex, ar.PrevLogTerm) {
 		return &rpc.AppendEntriesResponse{
 			Term: state.DefaultPersistentState.GetCurrentTerm(),
@@ -52,5 +52,6 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 
 	return &rpc.AppendEntriesResponse{
 		Term: state.DefaultPersistentState.GetCurrentTerm(),
+		Success:true,
 	}, nil
 }

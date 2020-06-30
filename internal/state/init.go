@@ -1,6 +1,6 @@
 package state
 
-import "github.com/LaCodon/verteilte-systeme/pkg/redolog"
+import "github.com/LaCodon/verteilte-systeme/pkg/rpc"
 
 func init() {
 	DefaultPersistentState = &PersistentState{
@@ -10,6 +10,6 @@ func init() {
 			Id   *int32
 			Term int32
 		}{Id: nil, Term: 1},
-		Log: []*redolog.Element{},
+		Log: []*rpc.LogEntry{},
 	}
 }

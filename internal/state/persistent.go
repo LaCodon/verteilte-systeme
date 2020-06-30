@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/LaCodon/verteilte-systeme/pkg/redolog"
+	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
 )
 
 type NodeState int
@@ -22,7 +22,7 @@ type PersistentState struct {
 		Id   *int32
 		Term int32
 	}
-	Log []*redolog.Element
+	Log []*rpc.LogEntry
 }
 
 // Makes no use of RW-Mutex.
@@ -76,11 +76,13 @@ func (s *PersistentState) SetCurrentTerm(t int32) {
 	s.CurrentTerm = t
 }
 
-func (s *PersistentState) AddToLog(l *redolog.Element) {
+func (s *PersistentState) AddToLog(l ...*rpc.LogEntry) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 
-	s.Log = append(s.Log, l)
+	for _, e := range l{
+		s.Log = append(s.Log, e)
+	}
 }
 
 func (s *PersistentState) GetCurrentState() NodeState {
@@ -97,7 +99,7 @@ func (s *PersistentState) GetCurrentTerm() int32 {
 	return s.CurrentTerm
 }
 
-func (s *PersistentState) GetLogElement(i int) redolog.Element {
+func (s *PersistentState) GetLogElement(i int) rpc.LogEntry {
 	s.Mutex.RLock()
 	defer s.Mutex.RUnlock()
 
@@ -113,7 +115,7 @@ func (s *PersistentState) GetLogLength() int {
 	return len(s.Log)
 }
 
-func (s *PersistentState) UpdateAndAppendLog(elements []*redolog.Element) {
+func (s *PersistentState) UpdateAndAppendLog(elements []*rpc.LogEntry) {
 	s.Mutex.RLock()
 	defer s.Mutex.RUnlock()
 

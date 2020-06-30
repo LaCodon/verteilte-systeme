@@ -33,7 +33,7 @@ message LogEntry{
   int32 Index = 1;
   int32 Term = 2;
   string Key = 3;
-  int32 Action = 4;
+  int32 Action = 4; // 1->Set; 2->Delete
   string Value = 5;
 }
 

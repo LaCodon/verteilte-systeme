@@ -2,6 +2,8 @@ package state
 
 type LeaderState struct {
 	State
-	nextIndex  map[int]int
-	matchIndex map[int]int
+	NextIndex  map[int]int
+	MatchIndex map[int]int
 }
+
+var DefaultLeaderState *LeaderState
