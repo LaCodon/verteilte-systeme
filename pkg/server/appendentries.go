@@ -6,7 +6,6 @@ import (
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
-	"github.com/LaCodon/verteilte-systeme/pkg/redolog"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
 )
 
@@ -36,17 +35,17 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	}
 
 	// update log
-	var elements []*redolog.Element
-	for _, e := range ar.Entries{
-		elements = append(elements, redolog.LogEntryToElement(e))
-	}
-	state.DefaultPersistentState.UpdateAndAppendLog(elements)
+	if len(ar.Entries) > 0 {
+		lg.Log.Infof("received log entries: %v", ar.Entries)
+		state.DefaultPersistentState.UpdateAndAppendLog(ar.Entries)
 
-	if ar.LeaderCommit > state.DefaultVolatileState.CommitIndex {
-		if ar.LeaderCommit < elements[len(elements)-1].Index {
-			state.DefaultVolatileState.CommitIndex = ar.LeaderCommit
-		} else {
-			state.DefaultVolatileState.CommitIndex = elements[len(elements)-1].Index
+		lg.Log.Debug("setting commit index...")
+		if ar.LeaderCommit > state.DefaultVolatileState.CommitIndex {
+			if ar.LeaderCommit < ar.Entries[len(ar.Entries)-1].Index {
+				state.DefaultVolatileState.CommitIndex = ar.LeaderCommit
+			} else {
+				state.DefaultVolatileState.CommitIndex = ar.Entries[len(ar.Entries)-1].Index
+			}
 		}
 	}
 

@@ -48,8 +48,9 @@ func run(c *cli.Context) error {
 	go func() {
 		// print current state
 		for {
-			time.Sleep(2000 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			lg.Log.Infof("Current state: %d in term %d", state.DefaultPersistentState.CurrentSate, state.DefaultPersistentState.CurrentTerm)
+			break
 		}
 	}()
 
@@ -63,7 +64,7 @@ func run(c *cli.Context) error {
 	// Stop routines and RPC server
 	cancel()
 	// leave some time for go routines to stop
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 	server.RpcServer.GracefulStop()
 
 	time.Sleep(1 * time.Second)

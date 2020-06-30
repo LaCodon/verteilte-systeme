@@ -12,4 +12,14 @@ func init() {
 		}{Id: nil, Term: 1},
 		Log: []*rpc.LogEntry{},
 	}
+
+	DefaultLeaderState = &LeaderState{
+		NextIndex:  make(map[int]int),
+		MatchIndex: make(map[int]int),
+	}
+
+	DefaultVolatileState = &VolatileState{
+		CommitIndex: 0,
+		LastApplied: 0,
+	}
 }

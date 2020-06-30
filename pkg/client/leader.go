@@ -6,13 +6,23 @@ import (
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
-	"math/rand"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
-var NewLogEntries chan *rpc.LogEntry
+type UserInput struct{
+	Key string
+	Var string
+	Action int32
+}
+
+var NewUserInput chan *UserInput
 
 func BeLeader(ctx context.Context) {
 	clients := ConnectToNodes(config.Default.PeerNodes.Value())
@@ -21,64 +31,92 @@ func BeLeader(ctx context.Context) {
 	for i := range clients {
 		state.DefaultLeaderState.NextIndex[i] = int(state.DefaultPersistentState.GetLastLogIndexFragile()) + 1
 		state.DefaultLeaderState.MatchIndex[i] = 0
+		lg.Log.Debugf("initialised nextIndex[%d]=%d", i, state.DefaultLeaderState.NextIndex[i])
 	}
 
-	SendHeartbeatsAsync(ctx, clients)
 
-	HandleUserInput(ctx, clients)
+
+	//read user Input
+	NewUserInput = make(chan *UserInput, 20)
+	go HandleUserInput()
+
+	Send(ctx, clients)
+
 
 }
 
-func SendHeartbeatsAsync(ctx context.Context, clients ClientSet) {
-	go func(ctx context.Context, clients ClientSet) {
-		for state.DefaultPersistentState.GetCurrentState() == state.Leader && ctx.Err() == nil {
-			term := state.DefaultPersistentState.GetCurrentTerm()
-
-			for _, client := range clients {
-				go func(c rpc.NodeClient, ctx context.Context) {
-					ctx, _ = context.WithTimeout(ctx, 500*time.Millisecond)
-					_, err := c.AppendEntries(ctx, &rpc.AppendEntriesRequest{Term: term})
-					if err != nil {
-						lg.Log.Debugf("error from client.AppendEntries: %s", err)
-					}
-				}(client, ctx)
-			}
-
-			time.Sleep(800 * time.Millisecond)
+func HandleUserInput() {
+	for {
+		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+		if err != nil {
+			lg.Log.Warning(err)
 		}
-	}(ctx, clients)
+		file := path.Join(dir, "../userInput/input.txt")
+		//read data from file
+		data, err := ioutil.ReadFile(file)
+		if err != nil {
+			lg.Log.Warningf("Error while reading file: %s", err)
+		}
+		// remove data from file
+		inputFile, err := os.OpenFile(file, os.O_TRUNC, 0666)
+		if err != nil {
+			lg.Log.Warningf("Error while reading file: %s", err)
+		}
+		inputFile.Close()
+		//parse entries
+		entries := strings.Split(string(data), "\n")
+		for _, entry := range entries {
+			cmd := strings.Fields(entry)
+			if len(cmd) > 1 {
+				if len(cmd) == 2 {
+					cmd = append(cmd, "0")
+				}
+				action, err := strconv.Atoi(cmd[0])
+				lg.Log.Infof("Recieved user command: %d %s %s", action, cmd[1], cmd[2])
+				if err == nil {
+					NewUserInput <- &UserInput{
+						Key:    cmd[1],
+						Var:    cmd[2],
+						Action: int32(action),
+					}
+				} else {
+					lg.Log.Warningf("Could not convert user input \"%s\" to action: %s", cmd[0], err)
+				}
+			}
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 func Send(ctx context.Context, clients ClientSet) {
-	go func(ctx context.Context, clients ClientSet) {
-		for state.DefaultPersistentState.GetCurrentState() == state.Leader && ctx.Err() == nil {
-
+	for state.DefaultPersistentState.GetCurrentState() == state.Leader && ctx.Err() == nil {
+		go func(ctx context.Context, clients ClientSet) {
+			lg.Log.Debug("Sending next AppendEntries request.")
 			//handle new User input
 			var entries []*rpc.LogEntry
-			newUserInput := true
-			for newUserInput {
+			moreUserInput := true
+			for moreUserInput {
 				select {
-				case newEntry := <-NewLogEntries:
+				case input := <- NewUserInput:
+					newEntry := &rpc.LogEntry{
+						Index:  state.DefaultPersistentState.GetLastLogIndexFragile() + 1,
+						Term:   state.DefaultPersistentState.CurrentTerm,
+						Key:    input.Key,
+						Action: input.Action,
+						Value:  input.Var,
+					}
+					lg.Log.Debugf("new user entry: %s", newEntry)
 					entries = append(entries, newEntry)
 				default:
-					newUserInput = false
+					lg.Log.Debug("no new user entries")
+					moreUserInput = false
 				}
 			}
-
-			// generate request
-			state.DefaultPersistentState.Mutex.RLock()
-			state.DefaultVolatileState.Mutex.RLock()
-			r := &rpc.AppendEntriesRequest{
-				Term:                 state.DefaultPersistentState.CurrentTerm,
-				LeaderId:             int32(config.Default.NodeId),
-				PrevLogIndex:         state.DefaultPersistentState.GetLastLogIndexFragile(),
-				PrevLogTerm:          state.DefaultPersistentState.GetLastLogTermFragile(),
-				Entries:              entries,
-				LeaderCommit:         state.DefaultVolatileState.CommitIndex,
-			}
+			lg.Log.Debugf("New Entries: %v", entries)
+			LastLogIndex := state.DefaultPersistentState.GetLastLogIndexFragile()
+			LastLogTerm := state.DefaultPersistentState.GetLastLogTermFragile()
 			state.DefaultPersistentState.AddToLog(entries...)
-			state.DefaultVolatileState.Mutex.RUnlock()
-			state.DefaultPersistentState.Mutex.RUnlock()
 
 			// count the successful replicated logs; start at 1 for leaders log
 			successfulReplications := 1
@@ -88,44 +126,57 @@ func Send(ctx context.Context, clients ClientSet) {
 			//sending request to all nodes
 			for i, client := range clients {
 				id := i
-				req := r
-				logReplicated := false
+				entriesToSend := state.DefaultPersistentState.Log[state.DefaultLeaderState.NextIndex[id]:]
+				r := &rpc.AppendEntriesRequest{
+					Term:         state.DefaultPersistentState.CurrentTerm,
+					LeaderId:     int32(config.Default.NodeId),
+					PrevLogIndex: LastLogIndex,
+					PrevLogTerm:  LastLogTerm,
+					Entries:      entriesToSend,
+					LeaderCommit: state.DefaultVolatileState.CommitIndex,
+				}
 				go func(c rpc.NodeClient, ctx context.Context) {
-					for !logReplicated {
-						ctx, _ = context.WithTimeout(ctx, 500*time.Millisecond)
-						resp, err := c.AppendEntries(ctx, r)
-						if err == nil {
-							if resp.Success {
-								logReplicated = true
-								lock.Lock()
-								successfulReplications++
-								lock.Unlock()
+					if len(entriesToSend) == 0 {
+						lg.Log.Infof("sending heartbeat to node %d", id)
+					} else {
+						lg.Log.Infof("sending entries to node %d: %v", id, entriesToSend)
+					}
+					ctx, _ = context.WithTimeout(ctx, 500*time.Millisecond)
+					resp, err := c.AppendEntries(ctx, r)
+					if err == nil {
+						lg.Log.Infof("node %d responded: %s", id, resp)
+						if resp.Success {
+							lock.Lock()
+							successfulReplications++
+							lock.Unlock()
+							state.DefaultLeaderState.NextIndex[id] = int(state.DefaultPersistentState.GetLastLogIndexFragile()) + 1
 
-								if successfulReplications > nodeCount/2 {
-									state.DefaultVolatileState.CommitIndex = state.DefaultPersistentState.GetLastLogIndexFragile()
-									lg.Log.Debugf("Replicated log on the majority of the nodes, new commit index: %s", state.DefaultVolatileState.CommitIndex)
-								}
+							if successfulReplications > nodeCount/2 {
+								state.DefaultVolatileState.CommitIndex = state.DefaultPersistentState.GetLastLogIndexFragile()
+								lg.Log.Debugf("Replicated log on the majority of the nodes, new commit index: %d", state.DefaultVolatileState.CommitIndex)
+							}
+						} else {
+							if resp.Term > state.DefaultPersistentState.CurrentTerm {
+								state.DefaultPersistentState.SetCurrentState(state.Follower)
 							} else {
-								if state.DefaultLeaderState.NextIndex[id]>1 {
+								if state.DefaultLeaderState.NextIndex[id] > 1 {
 									state.DefaultLeaderState.NextIndex[id]--
-									req.Entries = state.DefaultPersistentState.Log[state.DefaultLeaderState.NextIndex[id]:]
 								}
 								lg.Log.Debugf("Replicating log failed for node %d, retrying with NextIndex=%d", id, state.DefaultLeaderState.NextIndex[id])
 							}
-						} else {
-							lg.Log.Debugf("error from client.AppendEntries: %s", err)
 						}
+					} else {
+						lg.Log.Debugf("error from client.AppendEntries: %s", err)
 					}
 				}(client, ctx)
 			}
-			//TODO: assure that ALL nodes have the correct log
 
-			time.Sleep(800 * time.Millisecond)
-		}
-	}(ctx, clients)
+		}(ctx, clients)
+		time.Sleep(800 * time.Millisecond)
+	}
 }
 
-func HandleUserInput(ctx context.Context, clients ClientSet) {
+/*func HandleUserInput(ctx context.Context, clients ClientSet) {
 	lastLogIndex := state.DefaultPersistentState.GetLastLogIndexFragile()
 	lastLogTerm := state.DefaultPersistentState.GetLastLogTermFragile()
 
@@ -205,4 +256,4 @@ func HandleUserInput(ctx context.Context, clients ClientSet) {
 			}
 		}
 	}
-}
+}*/

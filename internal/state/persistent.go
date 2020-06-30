@@ -52,6 +52,12 @@ func (s *PersistentState) GetLastLogTermFragile() int32 {
 }
 
 func (s *PersistentState) ContainsLogElementFragile(index int32, term int32) bool {
+	if index == -1 {
+		return true
+	}
+	if int(index) >= len(s.Log) {
+		return false
+	}
 	return s.Log[index].Term == term
 }
 
@@ -116,8 +122,8 @@ func (s *PersistentState) GetLogLength() int {
 }
 
 func (s *PersistentState) UpdateAndAppendLog(elements []*rpc.LogEntry) {
-	s.Mutex.RLock()
-	defer s.Mutex.RUnlock()
+	//s.Mutex.RLock()
+	//defer s.Mutex.RUnlock()
 
 	//remove all inconsistent elements
 	for _, element := range elements {
