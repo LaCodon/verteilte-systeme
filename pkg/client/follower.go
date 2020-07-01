@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
+	"github.com/LaCodon/verteilte-systeme/pkg/config"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
-	"math/rand"
 	"time"
 )
 
@@ -17,12 +17,12 @@ func BeFollower(ctx context.Context) {
 
 	running := true
 	for running && ctx.Err() == nil {
-		// random int between 150 and 300
-		timeout := time.Duration(rand.Intn(1000)+1000) * time.Millisecond
+		// Randomize timeout every loop to prevent from forcing a node into special role
+		config.Default.RandomizeHeartbeatTimeout()
 		select {
 		case <-Heartbeat:
 			lg.Log.Debug("Got heartbeat")
-		case <-time.After(timeout):
+		case <-time.After(config.Default.HeartbeatTimeout):
 			lg.Log.Info("Heartbeat timed out")
 			if BeCandidate() {
 				running = false

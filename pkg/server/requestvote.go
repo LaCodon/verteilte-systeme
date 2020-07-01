@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
+	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
 )
@@ -25,6 +26,12 @@ func (s *Server) RequestVote(c context.Context, v *rpc.VoteRequest) (*rpc.VoteRe
 		state.DefaultPersistentState.GetLastLogTermFragile() > v.LastLogTerm {
 		voteGranted = false
 		lg.Log.Infof("Denied vote request from %d in term %d", v.CandidateId, v.Term)
+
+		if state.DefaultPersistentState.CurrentSate == state.Leader {
+			// got message from client, reset connection backoff
+			lg.Log.Debug("Reset connection backoff")
+			client.DefaultClientSet.ResetBackoff()
+		}
 	} else {
 		// elect and update self
 		voteGranted = true

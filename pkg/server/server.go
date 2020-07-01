@@ -33,7 +33,7 @@ func StartListen() error {
 	go func() {
 		lg.Log.Info("RPC Server is now serving")
 		if err := RpcServer.Serve(listener); err != nil {
-			lg.Log.Criticalf("Failed to start RPC server: %RpcServer", err.Error())
+			lg.Log.Criticalf("Failed to start RPC server: %s", err.Error())
 		}
 	}()
 

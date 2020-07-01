@@ -25,8 +25,7 @@ type UserInput struct{
 var NewUserInput chan *UserInput
 
 func BeLeader(ctx context.Context) {
-	clients := ConnectToNodes(config.Default.PeerNodes.Value())
-
+	clients := DefaultClientSet
 	// reset volatile leader state
 	for i := range clients {
 		state.DefaultLeaderState.NextIndex[i] = int(state.DefaultPersistentState.GetLastLogIndexFragile()) + 1
@@ -175,85 +174,3 @@ func Send(ctx context.Context, clients ClientSet) {
 		time.Sleep(800 * time.Millisecond)
 	}
 }
-
-/*func HandleUserInput(ctx context.Context, clients ClientSet) {
-	lastLogIndex := state.DefaultPersistentState.GetLastLogIndexFragile()
-	lastLogTerm := state.DefaultPersistentState.GetLastLogTermFragile()
-
-	//TODO get user Input
-	keys := []string{"a","b","c","x","y","z"}
-	randomKey := rand.Intn(len(keys))
-	randomValue := rand.Intn(50)
-
-	randomAction := rand.Int31n(2)
-
-	// handle user Input
-	entry := &rpc.LogEntry{
-		Index: 				  state.DefaultPersistentState.GetLastLogIndexFragile()+1,
-		Term:                 state.DefaultPersistentState.CurrentTerm,
-		Key:                  keys[randomKey],
-		Action:               randomAction,
-		Value:                strconv.Itoa(randomValue),
-	}
-
-	//append user input to log
-	state.DefaultPersistentState.AddToLog(entry)
-	state.DefaultVolatileState.IncreaseLastAppliedFragile()
-	var entries []*rpc.LogEntry
-	entries = append(entries, entry)
-
-	//TODO send user Input to all follower
-	nodeCount := len(config.Default.PeerNodes.Value()) + 1
-	incomingResponses := make(chan *rpc.AppendEntriesResponse, nodeCount)
-
-	state.DefaultPersistentState.Mutex.RLock()
-	r := &rpc.AppendEntriesRequest{
-		Term:                 state.DefaultPersistentState.CurrentTerm,
-		LeaderId:             int32(config.Default.NodeId),
-		PrevLogIndex:         lastLogIndex,
-		PrevLogTerm:          lastLogTerm,
-		Entries:              entries,
-		LeaderCommit:         state.DefaultVolatileState.CommitIndex,
-	}
-	state.DefaultPersistentState.Mutex.RUnlock()
-
-	lg.Log.Debugf("Sending UserInput for term %d, LeaderID %d, PrevLogIndex %d, PrevLogTerm %d, LeaderCommit %d", r.Term, r.LeaderId, r.PrevLogIndex, r.PrevLogTerm, r.LeaderCommit)
-	lg.Log.Debugf("Log Element: %v", entries)
-
-
-	// send log to all other nodes
-	for _, c := range clients {
-		go func(client rpc.NodeClient) {
-			ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
-			resp, err := client.AppendEntries(ctx, r)
-			if err == nil {
-				if resp.Success {
-					incomingResponses <- resp
-				}
-			} else {
-				lg.Log.Debugf("Got error from client.AppendEntries call: %s", err)
-			}
-		}(c)
-	}
-	
-	replicating := true
-	//replicatedLogs start at 1 because leader has it already
-	replicatedLogs := 1
-
-	for replicating {
-		select {
-		case <-timedOut:
-			lg.Log.Info("timed out waiting for AppendEntries responds")
-			replicating = false
-		case resp := <-incomingResponses:
-			lg.Log.Infof("Got AppendEntries response: %s", resp)
-			if resp.Success {
-				replicatedLogs++
-
-				if replicatedLogs > nodeCount/2 {
-					state.DefaultVolatileState.CommitIndex = state.DefaultPersistentState.GetLastLogIndexFragile()
-				}
-			}
-		}
-	}
-}*/

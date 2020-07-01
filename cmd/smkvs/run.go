@@ -18,6 +18,10 @@ func run(c *cli.Context) error {
 	lg.Log.Infof("Hello, I'm node with id %d", config.Default.NodeId)
 	lg.Log.Infof("Configured peers: %s", config.Default.PeerNodes)
 
+	if config.Default.HeartbeatInterval < config.Default.AppendEntriesTimeout {
+		return fmt.Errorf("heartbeat intveral has to be greater than append entries timeout")
+	}
+
 	config.Default.Logfile = fmt.Sprintf("log%d.txt",config.Default.NodeId)
 	lg.Log.Infof("My log file: %s", config.Default.PeerNodes)
 
@@ -26,6 +30,9 @@ func run(c *cli.Context) error {
 
 	// the heartbeat channel tracks heartbeats from master node
 	client.Heartbeat = make(chan bool, 1)
+
+	// initial connect to other nodes
+	client.ConnectToNodes(config.Default.PeerNodes.Value())
 
 	if err := server.StartListen(); err != nil {
 		return err
@@ -48,9 +55,8 @@ func run(c *cli.Context) error {
 	go func() {
 		// print current state
 		for {
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(2000 * time.Millisecond)
 			lg.Log.Infof("Current state: %d in term %d", state.DefaultPersistentState.CurrentSate, state.DefaultPersistentState.CurrentTerm)
-			break
 		}
 	}()
 
@@ -64,7 +70,7 @@ func run(c *cli.Context) error {
 	// Stop routines and RPC server
 	cancel()
 	// leave some time for go routines to stop
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 	server.RpcServer.GracefulStop()
 
 	time.Sleep(1 * time.Second)
