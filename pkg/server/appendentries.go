@@ -15,10 +15,13 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 
 	if state.DefaultPersistentState.GetCurrentTerm() > ar.Term {
 		return &rpc.AppendEntriesResponse{
-			Term: state.DefaultPersistentState.GetCurrentTerm(),
+			Term:    state.DefaultPersistentState.GetCurrentTerm(),
 			Success: false,
 		}, fmt.Errorf("old term, ignored request")
 	}
+
+	state.DefaultPersistentState.Mutex.Lock()
+	defer state.DefaultPersistentState.Mutex.Unlock()
 
 	// immediately convert to follower (and mark leader as voted to prevent from new leader in this term)
 	state.DefaultPersistentState.UpdateFragile(state.Follower, ar.Term, &ar.LeaderId)
@@ -29,7 +32,7 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	// check PrevLogIndex and Term
 	if !state.DefaultPersistentState.ContainsLogElementFragile(ar.PrevLogIndex, ar.PrevLogTerm) {
 		return &rpc.AppendEntriesResponse{
-			Term: state.DefaultPersistentState.GetCurrentTerm(),
+			Term:    state.DefaultPersistentState.CurrentTerm,
 			Success: false,
 		}, fmt.Errorf("previous log entry not found")
 	}
@@ -37,20 +40,20 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	// update log
 	if len(ar.Entries) > 0 {
 		lg.Log.Infof("received log entries: %v", ar.Entries)
-		state.DefaultPersistentState.UpdateAndAppendLog(ar.Entries)
+		state.DefaultPersistentState.UpdateAndAppendLogFragile(ar.Entries)
 
 		lg.Log.Debug("setting commit index...")
-		if ar.LeaderCommit > state.DefaultVolatileState.CommitIndex {
+		if ar.LeaderCommit > state.DefaultVolatileState.GetCommitIndex() {
 			if ar.LeaderCommit < ar.Entries[len(ar.Entries)-1].Index {
-				state.DefaultVolatileState.CommitIndex = ar.LeaderCommit
+				state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
 			} else {
-				state.DefaultVolatileState.CommitIndex = ar.Entries[len(ar.Entries)-1].Index
+				state.DefaultVolatileState.SetCommitIndex(ar.Entries[len(ar.Entries)-1].Index)
 			}
 		}
 	}
 
 	return &rpc.AppendEntriesResponse{
-		Term: state.DefaultPersistentState.GetCurrentTerm(),
-		Success:true,
+		Term:    state.DefaultPersistentState.CurrentTerm,
+		Success: true,
 	}, nil
 }

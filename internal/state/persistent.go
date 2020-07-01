@@ -82,11 +82,8 @@ func (s *PersistentState) SetCurrentTerm(t int32) {
 	s.CurrentTerm = t
 }
 
-func (s *PersistentState) AddToLog(l ...*rpc.LogEntry) {
-	s.Mutex.Lock()
-	defer s.Mutex.Unlock()
-
-	for _, e := range l{
+func (s *PersistentState) AddToLogFragile(l ...*rpc.LogEntry) {
+	for _, e := range l {
 		s.Log = append(s.Log, e)
 	}
 }
@@ -121,14 +118,15 @@ func (s *PersistentState) GetLogLength() int {
 	return len(s.Log)
 }
 
-func (s *PersistentState) UpdateAndAppendLog(elements []*rpc.LogEntry) {
-	//s.Mutex.RLock()
-	//defer s.Mutex.RUnlock()
+// UpdateAndAppendLogFragile removes all invalid elements and appends the new received ones
+func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
+	var firstNewElementIndex int32
 
 	//remove all inconsistent elements
 	for _, element := range elements {
 		if len(s.Log) > int(element.Index) {
 			if element.Term != s.Log[element.Index].Term {
+				firstNewElementIndex = element.Index
 				s.Log = s.Log[:element.Index]
 				break
 			}
@@ -136,8 +134,6 @@ func (s *PersistentState) UpdateAndAppendLog(elements []*rpc.LogEntry) {
 	}
 
 	//add all new elements
-	s.Log = append(s.Log, elements...)
+	s.Log = append(s.Log, elements[firstNewElementIndex:]...)
 
 }
-
-
