@@ -7,20 +7,20 @@ func init() {
 		CurrentSate: Follower,
 		CurrentTerm: 1,
 		VoteFor: struct {
-			Id   *int32
+			Id   *uint32
 			Term int32
 		}{Id: nil, Term: 1},
 		Log: []*rpc.LogEntry{},
 	}
 
 	DefaultLeaderState = &LeaderState{
-		NextIndex:  make(map[int]int),
-		MatchIndex: make(map[int]int),
+		NextIndex:  make(map[uint32]int32),
+		MatchIndex: make(map[uint32]int32),
 	}
 
 	DefaultVolatileState = &VolatileState{
-		CommitIndex:   0,
-		LastApplied:   0,
+		CommitIndex:   -1,
+		LastApplied:   -1,
 		CurrentLeader: "",
 	}
 }

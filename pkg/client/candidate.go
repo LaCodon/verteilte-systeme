@@ -17,7 +17,7 @@ func BeCandidate() bool {
 	{ // transition to candidate state
 		state.DefaultPersistentState.Mutex.Lock()
 
-		id := int32(config.Default.NodeId)
+		id := config.Default.NodeId
 		state.DefaultPersistentState.UpdateFragile(state.Candidate, state.DefaultPersistentState.CurrentTerm+1, &id)
 
 		state.DefaultPersistentState.Mutex.Unlock()
@@ -32,7 +32,7 @@ func BeCandidate() bool {
 	state.DefaultPersistentState.Mutex.RLock()
 	r := &rpc.VoteRequest{
 		Term:         state.DefaultPersistentState.CurrentTerm,
-		CandidateId:  int32(config.Default.NodeId),
+		CandidateId:  config.Default.NodeId,
 		LastLogIndex: state.DefaultPersistentState.GetLastLogIndexFragile(),
 		LastLogTerm:  state.DefaultPersistentState.GetLastLogTermFragile(),
 	}

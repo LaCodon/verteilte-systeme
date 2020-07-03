@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"github.com/LaCodon/verteilte-systeme/internal/helper"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
@@ -24,6 +25,12 @@ func (s *Server) RegisterNode(c context.Context, ar *rpc.NodeRegisterRequest) (*
 
 	config.Default.AddNode(ar.ConnectionData)
 	client.ForceClientReconnect = true
+
+	state.DefaultLeaderState.Mutex.Lock()
+	id := helper.TargetToId(ar.ConnectionData)
+	state.DefaultLeaderState.NextIndex[id] = 0
+	state.DefaultLeaderState.MatchIndex[id] = -1
+	state.DefaultLeaderState.Mutex.Unlock()
 
 	lg.Log.Infof("Successfully registered new node %s, %s", ar.ConnectionData, config.Default.AllNodes.Value())
 

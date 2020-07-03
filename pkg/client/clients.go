@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/LaCodon/verteilte-systeme/internal/helper"
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
@@ -63,4 +64,9 @@ func (cs ClientSet) ResetBackoff() {
 	for _, c := range cs {
 		c.Connection.ResetConnectBackoff()
 	}
+}
+
+// GetId hashes the target and thus makes it a unique id
+func (c *Client) GetId() uint32 {
+	return helper.TargetToId(c.Target)
 }

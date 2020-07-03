@@ -14,6 +14,7 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	lg.Log.Debugf("Got heartbeat with term %d", ar.Term)
 
 	if state.DefaultPersistentState.GetCurrentTerm() > ar.Term {
+		lg.Log.Debugf("Ignored heartbeat because it had outdated term")
 		return &rpc.AppendEntriesResponse{
 			Term:    state.DefaultPersistentState.GetCurrentTerm(),
 			Success: false,
@@ -35,28 +36,34 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 		client.ForceClientReconnect = true
 	}
 
+	lg.Log.Debugf("PrevLogIndex: %d ; PrevLogTerm: %d", ar.PrevLogIndex, ar.PrevLogTerm)
+
 	// check PrevLogIndex and Term
 	if !state.DefaultPersistentState.ContainsLogElementFragile(ar.PrevLogIndex, ar.PrevLogTerm) {
+		lg.Log.Debugf("Ignored AppendEntries for index %d because i'm missing older entries", ar.LeaderCommit)
 		return &rpc.AppendEntriesResponse{
 			Term:    state.DefaultPersistentState.CurrentTerm,
 			Success: false,
 		}, nil
 	}
 
+	lg.Log.Debugf("old commit index: %d", state.DefaultVolatileState.GetCommitIndex())
 	// update log
 	if len(ar.Entries) > 0 {
 		lg.Log.Infof("received log entries: %v", ar.Entries)
 		state.DefaultPersistentState.UpdateAndAppendLogFragile(ar.Entries)
 
-		lg.Log.Debug("setting commit index...")
-		if ar.LeaderCommit > state.DefaultVolatileState.GetCommitIndex() {
-			if ar.LeaderCommit < ar.Entries[len(ar.Entries)-1].Index {
-				state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
-			} else {
-				state.DefaultVolatileState.SetCommitIndex(ar.Entries[len(ar.Entries)-1].Index)
-			}
+		if ar.LeaderCommit < ar.Entries[len(ar.Entries)-1].Index {
+			// sync with leader commit
+			state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
+		} else {
+			// set commit index to highest element I received
+			state.DefaultVolatileState.SetCommitIndex(ar.Entries[len(ar.Entries)-1].Index)
 		}
+	} else {
+		state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
 	}
+	lg.Log.Debugf("new commit index: %d", state.DefaultVolatileState.GetCommitIndex())
 
 	state.DefaultVolatileState.SetCurrentLeader(ar.LeaderTarget)
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/LaCodon/verteilte-systeme/internal/helper"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/config"
@@ -17,6 +18,8 @@ import (
 )
 
 func run(c *cli.Context) error {
+	config.Default.NodeId = helper.TargetToId(config.Default.MyNode)
+
 	lg.Log.Infof("Hello, I'm node with id %d", config.Default.NodeId)
 	lg.Log.Infof("Configured peers: %s", config.Default.GetPeerNodesData())
 
@@ -75,6 +78,7 @@ func run(c *cli.Context) error {
 			time.Sleep(2000 * time.Millisecond)
 			lg.Log.Infof("Current state: %d in term %d", state.DefaultPersistentState.CurrentSate, state.DefaultPersistentState.CurrentTerm)
 			lg.Log.Infof("Current peer nodes: %s", config.Default.GetPeerNodesData())
+			//lg.Log.Warningf("Current Log: %s", state.DefaultPersistentState.Log)
 		}
 	}()
 
@@ -108,7 +112,7 @@ func register(ctx context.Context) {
 			c, _ := context.WithTimeout(ctx, config.Default.RegisterTimeout)
 			resp, err := cl.NodeClient.RegisterNode(c, &rpc.NodeRegisterRequest{
 				ConnectionData: config.Default.MyNode,
-				NodeId:         int32(config.Default.NodeId),
+				NodeId:         config.Default.NodeId,
 			})
 			if err != nil {
 				lg.Log.Errorf("Error during registration process: %s", err.Error())

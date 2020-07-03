@@ -37,14 +37,6 @@ func main() {
 				Value:       36000,
 				Destination: &config.Default.LocalPort,
 			},
-			&cli.IntFlag{
-				Name:        "node-id",
-				Aliases:     []string{"n"},
-				Usage:       "ID of the current node",
-				EnvVars:     []string{"SMKVS_NODE_ID"},
-				Value:       rand.Int(),
-				Destination: &config.Default.NodeId,
-			},
 			&cli.StringFlag{
 				Name:        "listen",
 				Aliases:     []string{"l"},

@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
 )
 
@@ -16,10 +17,10 @@ var DefaultPersistentState *PersistentState
 
 type PersistentState struct {
 	State
-	CurrentSate   NodeState
-	CurrentTerm   int32
-	VoteFor       struct {
-		Id   *int32
+	CurrentSate NodeState
+	CurrentTerm int32
+	VoteFor     struct {
+		Id   *uint32
 		Term int32
 	}
 	Log []*rpc.LogEntry
@@ -32,7 +33,7 @@ func (s *PersistentState) GetLastLogIndexFragile() int32 {
 
 // UpdateFragile updates all relevant persistent state variables.
 // Makes no use of RW-Mutex.
-func (s *PersistentState) UpdateFragile(newState NodeState, newTerm int32, newVoteFor *int32) {
+func (s *PersistentState) UpdateFragile(newState NodeState, newTerm int32, newVoteFor *uint32) {
 	s.CurrentSate = newState
 	s.CurrentTerm = newTerm
 	s.VoteFor.Term = newTerm
@@ -126,19 +127,30 @@ func (s *PersistentState) GetLogLength() int {
 
 // UpdateAndAppendLogFragile removes all invalid elements and appends the new received ones
 func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
-	var firstNewElementIndex int32
+	commitIndex := DefaultVolatileState.GetCommitIndex()
 
-	//remove all inconsistent elements
 	for _, element := range elements {
-		if len(s.Log) > int(element.Index) {
-			if element.Term != s.Log[element.Index].Term {
-				firstNewElementIndex = element.Index
-				s.Log = s.Log[:element.Index]
-				break
+		if element.Index > commitIndex {
+			s.Log = append(s.Log, element)
+			if element.Index != int32(len(s.Log)-1) {
+				lg.Log.Errorf("Appended bullshit data!")
 			}
 		}
 	}
 
-	//add all new elements
-	s.Log = append(s.Log, elements[firstNewElementIndex:]...)
+	//var firstNewElementIndex int32
+
+	// remove all inconsistent elements
+	//for _, element := range elements {
+	//	if len(s.Log) > int(element.Index) {
+	//		if element.Term != s.Log[element.Index].Term {
+	//			firstNewElementIndex = element.Index
+	//			s.Log = s.Log[:element.Index]
+	//			break
+	//		}
+	//	}
+	//}
+	//
+	//// add all new elements
+	//s.Log = append(s.Log, elements[firstNewElementIndex:]...)
 }

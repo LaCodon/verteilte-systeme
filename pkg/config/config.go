@@ -29,7 +29,7 @@ type Config struct {
 	RegisterTimeout time.Duration
 	// KickThreshold is the max amount of failed AppendEntries RPCs after a node gets kicked from the leader
 	KickThreshold int
-	NodeId        int
+	NodeId        uint32
 
 	// LogFile holds the filename where the log entries are saved
 	Logfile string
