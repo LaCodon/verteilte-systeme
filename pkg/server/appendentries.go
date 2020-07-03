@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
+	"github.com/LaCodon/verteilte-systeme/pkg/config"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
 )
@@ -17,7 +17,7 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 		return &rpc.AppendEntriesResponse{
 			Term:    state.DefaultPersistentState.GetCurrentTerm(),
 			Success: false,
-		}, fmt.Errorf("old term, ignored request")
+		}, nil
 	}
 
 	state.DefaultPersistentState.Mutex.Lock()
@@ -29,12 +29,18 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	// send heartbeat to other go routines
 	client.Heartbeat <- true
 
+	if config.Default.HasNodesDiff(ar.AllNodes) {
+		// save new peer node information
+		config.Default.SetNewNodes(ar.AllNodes)
+		client.ForceClientReconnect = true
+	}
+
 	// check PrevLogIndex and Term
 	if !state.DefaultPersistentState.ContainsLogElementFragile(ar.PrevLogIndex, ar.PrevLogTerm) {
 		return &rpc.AppendEntriesResponse{
 			Term:    state.DefaultPersistentState.CurrentTerm,
 			Success: false,
-		}, fmt.Errorf("previous log entry not found")
+		}, nil
 	}
 
 	// update log
@@ -51,6 +57,8 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 			}
 		}
 	}
+
+	state.DefaultVolatileState.SetCurrentLeader(ar.LeaderTarget)
 
 	return &rpc.AppendEntriesResponse{
 		Term:    state.DefaultPersistentState.CurrentTerm,

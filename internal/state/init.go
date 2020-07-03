@@ -19,7 +19,8 @@ func init() {
 	}
 
 	DefaultVolatileState = &VolatileState{
-		CommitIndex: 0,
-		LastApplied: 0,
+		CommitIndex:   0,
+		LastApplied:   0,
+		CurrentLeader: "",
 	}
 }

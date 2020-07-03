@@ -1,40 +1,61 @@
 package client
 
 import (
+	"github.com/LaCodon/verteilte-systeme/pkg/config"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
 	"google.golang.org/grpc"
+	"sync"
 )
 
-
-type client struct {
+type Client struct {
 	NodeClient rpc.NodeClient
 	Connection *grpc.ClientConn
+	Target     string
+	ErrorCount int
 }
-type ClientSet []client
+type ClientSet []*Client
 
-var DefaultClientSet ClientSet
+var ForceClientReconnect bool
 
-// ConnectToNodes creates the default client set and returns it
-func ConnectToNodes(ips []string) (cs ClientSet) {
+var defaultClientSet ClientSet
+var clientConnectMutex sync.Mutex
+
+// connectToNodes creates the default Client set and returns it
+func connectToNodes(ips []string) (cs ClientSet) {
+	for _, c := range defaultClientSet {
+		if err := c.Connection.Close(); err != nil {
+			lg.Log.Warningf("Failed to close connection before reconnect")
+		}
+	}
+
 	for _, target := range ips {
 		conn, err := grpc.Dial(target, grpc.WithInsecure())
 		if err != nil {
 			lg.Log.Warningf("Error during connection setup to node '%s': %s", target, err)
 			continue
 		}
-		cs = append(cs, client{NodeClient: rpc.NewNodeClient(conn), Connection: conn})
+		cs = append(cs, &Client{NodeClient: rpc.NewNodeClient(conn), Connection: conn, Target: target})
 		lg.Log.Debugf("Successfully connected to node '%s'", target)
 	}
 
-	DefaultClientSet = cs
+	defaultClientSet = cs
 
 	return
 }
 
-// GetClientSet returns the default client set initialized by ConnectToNodes
+// GetClientSet returns the default Client set initialized by connectToNodes
 func GetClientSet() (cs ClientSet) {
-	return DefaultClientSet
+	clientConnectMutex.Lock()
+	defer clientConnectMutex.Unlock()
+
+	if ForceClientReconnect {
+		lg.Log.Infof("Force connection reestablishment")
+		connectToNodes(config.Default.GetPeerNodesData())
+		ForceClientReconnect = false
+	}
+
+	return defaultClientSet
 }
 
 // ResetBackoff resets the connection backoff for all clients

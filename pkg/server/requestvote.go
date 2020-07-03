@@ -30,7 +30,7 @@ func (s *Server) RequestVote(c context.Context, v *rpc.VoteRequest) (*rpc.VoteRe
 		if state.DefaultPersistentState.CurrentSate == state.Leader {
 			// got message from client, reset connection backoff
 			lg.Log.Debug("Reset connection backoff")
-			client.DefaultClientSet.ResetBackoff()
+			client.GetClientSet().ResetBackoff()
 		}
 	} else {
 		// elect and update self

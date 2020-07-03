@@ -16,9 +16,9 @@ var DefaultPersistentState *PersistentState
 
 type PersistentState struct {
 	State
-	CurrentSate NodeState
-	CurrentTerm int32
-	VoteFor     struct {
+	CurrentSate   NodeState
+	CurrentTerm   int32
+	VoteFor       struct {
 		Id   *int32
 		Term int32
 	}
@@ -107,7 +107,13 @@ func (s *PersistentState) GetLogElement(i int) rpc.LogEntry {
 	defer s.Mutex.RUnlock()
 
 	// create copy to prevent manipulation
-	r := *s.Log[i]
+	r := rpc.LogEntry{
+		Index:  s.Log[i].Index,
+		Term:   s.Log[i].Term,
+		Key:    s.Log[i].Key,
+		Action: s.Log[i].Action,
+		Value:  s.Log[i].Value,
+	}
 	return r
 }
 
@@ -135,5 +141,4 @@ func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
 
 	//add all new elements
 	s.Log = append(s.Log, elements[firstNewElementIndex:]...)
-
 }

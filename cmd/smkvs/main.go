@@ -27,7 +27,7 @@ func main() {
 				Usage:       "Peer IPs and Ports in",
 				EnvVars:     []string{"SMKVS_PEER_NODES"},
 				Required:    true,
-				Destination: config.Default.PeerNodes,
+				Destination: config.Default.AllNodes,
 			},
 			&cli.IntFlag{
 				Name:        "local-port",
@@ -44,6 +44,15 @@ func main() {
 				EnvVars:     []string{"SMKVS_NODE_ID"},
 				Value:       rand.Int(),
 				Destination: &config.Default.NodeId,
+			},
+			&cli.StringFlag{
+				Name:        "listen",
+				Aliases:     []string{"l"},
+				Usage:       "External listener IP and Port for current node",
+				EnvVars:     []string{"SMKVS_NODE_LISTEN"},
+				Required:    true,
+				Value:       "127.0.0.1:36000",
+				Destination: &config.Default.MyNode,
 			},
 		},
 		Authors: []*cli.Author{

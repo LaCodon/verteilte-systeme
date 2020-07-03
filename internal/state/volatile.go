@@ -2,8 +2,9 @@ package state
 
 type VolatileState struct {
 	State
-	CommitIndex int32
-	LastApplied int32
+	CommitIndex   int32
+	LastApplied   int32
+	CurrentLeader string
 }
 
 var DefaultVolatileState *VolatileState
@@ -25,4 +26,18 @@ func (s *VolatileState) GetCommitIndex() int32 {
 	defer s.Mutex.RUnlock()
 
 	return s.CommitIndex
+}
+
+func (s *VolatileState) GetCurrentLeader() string {
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
+
+	return s.CurrentLeader
+}
+
+func (s *VolatileState) SetCurrentLeader(target string) {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+
+	s.CurrentLeader = target
 }

@@ -25,6 +25,7 @@ func BeFollower(ctx context.Context) {
 		case <-time.After(config.Default.HeartbeatTimeout):
 			lg.Log.Info("Heartbeat timed out")
 			if BeCandidate() {
+				state.DefaultVolatileState.CurrentLeader = ""
 				running = false
 				lg.Log.Infof("I'm master now for term %d", state.DefaultPersistentState.GetCurrentTerm())
 			}

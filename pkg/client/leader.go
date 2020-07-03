@@ -26,7 +26,7 @@ var NewUserInput chan *UserInput
 
 func BeLeader(ctx context.Context) {
 	// reset volatile leader state
-	for i := range DefaultClientSet {
+	for i := range GetClientSet() {
 		state.DefaultLeaderState.NextIndex[i] = int(state.DefaultPersistentState.GetLastLogIndexFragile()) + 1
 		state.DefaultLeaderState.MatchIndex[i] = 0
 		lg.Log.Debugf("initialised nextIndex[%d]=%d", i, state.DefaultLeaderState.NextIndex[i])
@@ -128,11 +128,11 @@ func Send(ctx context.Context) {
 
 		// count the successful replicated logs; start at 1 for leaders log
 		successfulReplications := 1
-		nodeCount := len(config.Default.PeerNodes.Value()) + 1
+		nodeCount := config.Default.PeerNodeCount() + 1
 		var lock sync.Mutex
 
 		//sending request to all nodes
-		for id, client := range DefaultClientSet {
+		for id, client := range GetClientSet() {
 			state.DefaultPersistentState.Mutex.RLock()
 			entriesToSend := state.DefaultPersistentState.Log[state.DefaultLeaderState.NextIndex[id]:]
 			state.DefaultPersistentState.Mutex.RUnlock()
@@ -144,26 +144,42 @@ func Send(ctx context.Context) {
 				PrevLogTerm:  PrevLogTerm,
 				Entries:      entriesToSend,
 				LeaderCommit: state.DefaultVolatileState.GetCommitIndex(),
+				AllNodes:     config.Default.AllNodes.Value(),
+				LeaderTarget: config.Default.MyNode,
 			}
-			go func(c rpc.NodeClient, parentCtx context.Context, clientIndex int) {
+			go func(c *Client, parentCtx context.Context, clientIndex int) {
 				if len(entriesToSend) == 0 {
-					lg.Log.Infof("sending heartbeat to node %d", clientIndex)
+					lg.Log.Debugf("sending heartbeat to node %d", clientIndex)
 				} else {
-					lg.Log.Infof("sending entries to node %d: %v", clientIndex, entriesToSend)
+					lg.Log.Debugf("sending entries to node %d: %v", clientIndex, entriesToSend)
 				}
 				appendCtx, _ := context.WithTimeout(parentCtx, config.Default.AppendEntriesTimeout)
-				resp, err := c.AppendEntries(appendCtx, r)
+				resp, err := c.NodeClient.AppendEntries(appendCtx, r)
 				if err != nil {
-					lg.Log.Debugf("error from client.AppendEntries: %s", err)
+					lg.Log.Debugf("error from Client.AppendEntries: %s", err)
+					c.ErrorCount++
+
+					if c.ErrorCount > config.Default.KickThreshold {
+						config.Default.RemoveNode(c.Target)
+						ForceClientReconnect = true
+						lg.Log.Warningf("removed node %s from cluster", c.Target)
+					}
+
 					return
 				}
+
+				// got response, reset error counter
+				c.ErrorCount = 0
 
 				lg.Log.Debugf("node %d responded: %s", clientIndex, resp)
 				if resp.Success {
 					lock.Lock()
 					successfulReplications++
 					lock.Unlock()
+
+					state.DefaultLeaderState.Mutex.Lock()
 					state.DefaultLeaderState.NextIndex[clientIndex] = int(CurrentLogIndex) + 1
+					state.DefaultLeaderState.Mutex.Unlock()
 
 					if successfulReplications > nodeCount/2 {
 						state.DefaultVolatileState.SetCommitIndex(CurrentLogIndex)
@@ -173,13 +189,15 @@ func Send(ctx context.Context) {
 					if resp.Term > CurrentTerm {
 						state.DefaultPersistentState.SetCurrentState(state.Follower)
 					} else {
+						state.DefaultLeaderState.Mutex.Lock()
 						if state.DefaultLeaderState.NextIndex[clientIndex] > 1 {
 							state.DefaultLeaderState.NextIndex[clientIndex]--
 						}
 						lg.Log.Debugf("Replicating log failed for node %d, retrying with NextIndex=%d", clientIndex, state.DefaultLeaderState.NextIndex[clientIndex])
+						state.DefaultLeaderState.Mutex.Unlock()
 					}
 				}
-			}(client.NodeClient, ctx, id)
+			}(client, ctx, id)
 		}
 
 		time.Sleep(config.Default.HeartbeatInterval)

@@ -22,6 +22,8 @@ message AppendEntriesRequest {
   int32 prevLogTerm = 4;
   repeated LogEntry entries = 5;
   int32 leaderCommit = 6;
+  repeated string allNodes = 7;
+  string leaderTarget = 8;
 }
 
 message AppendEntriesResponse {
@@ -29,7 +31,7 @@ message AppendEntriesResponse {
   bool success = 2;
 }
 
-message LogEntry{
+message LogEntry {
   int32 Index = 1;
   int32 Term = 2;
   string Key = 3;
@@ -37,7 +39,18 @@ message LogEntry{
   string Value = 5;
 }
 
+message NodeRegisterRequest {
+  int32 nodeId = 1;
+  string connectionData = 2;
+}
+
+message NodeRegisterResponse {
+  bool success = 1;
+  string redirectTarget = 2;
+}
+
 service Node {
   rpc RequestVote (VoteRequest) returns (VoteResponse) {};
   rpc AppendEntries (AppendEntriesRequest) returns (AppendEntriesResponse) {};
+  rpc RegisterNode (NodeRegisterRequest) returns (NodeRegisterResponse) {};
 }

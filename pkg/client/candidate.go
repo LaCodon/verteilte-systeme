@@ -24,7 +24,7 @@ func BeCandidate() bool {
 	}
 
 	electing := true
-	nodeCount := len(config.Default.PeerNodes.Value()) + 1
+	nodeCount := config.Default.PeerNodeCount() + 1
 	incomingVotes := make(chan *rpc.VoteResponse, nodeCount)
 	// start with voteCount = 1 because this node votes for itself
 	voteCount := 1
@@ -41,7 +41,7 @@ func BeCandidate() bool {
 	lg.Log.Debugf("Requesting vote for term %d, candidID %d, lIndex %d, lTerm %d", r.Term, r.CandidateId, r.LastLogIndex, r.LastLogTerm)
 
 	// send vote requests to all other nodes
-	for _, c := range DefaultClientSet {
+	for _, c := range GetClientSet() {
 		go func(client rpc.NodeClient) {
 			ctx, _ := context.WithTimeout(context.Background(), config.Default.RequestVoteTimeout)
 			resp, err := client.RequestVote(ctx, r)
@@ -50,7 +50,7 @@ func BeCandidate() bool {
 					incomingVotes <- resp
 				}
 			} else {
-				lg.Log.Debugf("Got error from client.RequestVote call: %s", err)
+				lg.Log.Debugf("Got error from Client.RequestVote call: %s", err)
 			}
 		}(c.NodeClient)
 	}
