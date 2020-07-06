@@ -1,7 +1,6 @@
 package state
 
 import (
-	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
 )
 
@@ -127,30 +126,30 @@ func (s *PersistentState) GetLogLength() int {
 
 // UpdateAndAppendLogFragile removes all invalid elements and appends the new received ones
 func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
-	commitIndex := DefaultVolatileState.GetCommitIndex()
+	//commitIndex := DefaultVolatileState.GetCommitIndex()
 
+	//for _, element := range elements {
+	//	if element.Index > commitIndex {
+	//		s.Log = append(s.Log, element)
+	//		if element.Index != int32(len(s.Log)-1) {
+	//			lg.Log.Errorf("Appended bullshit data!")
+	//		}
+	//	}
+	//}
+
+	var firstNewElementIndex int32
+
+	// remove all inconsistent elements
 	for _, element := range elements {
-		if element.Index > commitIndex {
-			s.Log = append(s.Log, element)
-			if element.Index != int32(len(s.Log)-1) {
-				lg.Log.Errorf("Appended bullshit data!")
+		if len(s.Log) > int(element.Index) {
+			if element.Term != s.Log[element.Index].Term {
+				firstNewElementIndex = element.Index
+				s.Log = s.Log[:element.Index]
+				break
 			}
 		}
 	}
 
-	//var firstNewElementIndex int32
-
-	// remove all inconsistent elements
-	//for _, element := range elements {
-	//	if len(s.Log) > int(element.Index) {
-	//		if element.Term != s.Log[element.Index].Term {
-	//			firstNewElementIndex = element.Index
-	//			s.Log = s.Log[:element.Index]
-	//			break
-	//		}
-	//	}
-	//}
-	//
-	//// add all new elements
-	//s.Log = append(s.Log, elements[firstNewElementIndex:]...)
+	// add all new elements
+	s.Log = append(s.Log, elements[firstNewElementIndex:]...)
 }
