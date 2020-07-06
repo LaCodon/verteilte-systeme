@@ -31,18 +31,28 @@ func connectToNodes(ips []string) (cs ClientSet) {
 	}
 
 	for _, target := range ips {
-		conn, err := grpc.Dial(target, grpc.WithInsecure())
+		nc, err := NewClient(target)
 		if err != nil {
 			lg.Log.Warningf("Error during connection setup to node '%s': %s", target, err)
 			continue
 		}
-		cs = append(cs, &Client{NodeClient: rpc.NewNodeClient(conn), Connection: conn, Target: target})
+
+		cs = append(cs, nc)
 		lg.Log.Debugf("Successfully connected to node '%s'", target)
 	}
 
 	defaultClientSet = cs
 
 	return
+}
+
+// NewClient calls grpc.Dial and returns the client object
+func NewClient(target string) (*Client, error) {
+	conn, err := grpc.Dial(target, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	return &Client{NodeClient: rpc.NewNodeClient(conn), Connection: conn, Target: target}, nil
 }
 
 // GetClientSet returns the default Client set initialized by connectToNodes
@@ -64,6 +74,17 @@ func (cs ClientSet) ResetBackoff() {
 	for _, c := range cs {
 		c.Connection.ResetConnectBackoff()
 	}
+}
+
+// HasClient returns true if the client set has a node with nodeId
+func (cs ClientSet) HasClient(nodeId uint32) bool {
+	for _, c := range cs {
+		if c.GetId() == nodeId {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetId hashes the target and thus makes it a unique id

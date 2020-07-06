@@ -87,7 +87,7 @@ func run(c *cli.Context) error {
 	// Wait for SIGINT signal
 	<-stop
 
-	lg.Log.Info("Stopping service...")
+	lg.Log.Warning("Stopping service...")
 
 	// Stop routines and RPC server
 	cancel()
@@ -103,30 +103,51 @@ func run(c *cli.Context) error {
 func register(ctx context.Context) {
 	lg.Log.Infof("Registering node...")
 	var wg sync.WaitGroup
+	success := make(chan bool)
 
 	for _, other := range client.GetClientSet() {
 		wg.Add(1)
-		go func(cl *client.Client) {
-			defer wg.Done()
-
-			c, _ := context.WithTimeout(ctx, config.Default.RegisterTimeout)
-			resp, err := cl.NodeClient.RegisterNode(c, &rpc.NodeRegisterRequest{
-				ConnectionData: config.Default.MyNode,
-				NodeId:         config.Default.NodeId,
-			})
-			if err != nil {
-				lg.Log.Errorf("Error during registration process: %s", err.Error())
-				return
-			}
-
-			if resp.Success == false && resp.RedirectTarget != "" {
-				// remove non leaders from node list but only if they sent an alternative where to register
-				config.Default.RemoveNode(cl.Target)
-				client.ForceClientReconnect = true
-			}
-		}(other)
+		go sendRegisterRequest(other, &wg, success, ctx)
 	}
 
 	wg.Wait()
+
 	lg.Log.Infof("Registering node done.")
+}
+
+func sendRegisterRequest(cl *client.Client, wg *sync.WaitGroup, success chan bool, ctx context.Context) {
+	defer wg.Done()
+
+	c, _ := context.WithTimeout(ctx, config.Default.RegisterTimeout)
+	resp, err := cl.NodeClient.RegisterNode(c, &rpc.NodeRegisterRequest{
+		ConnectionData: config.Default.MyNode,
+		NodeId:         config.Default.NodeId,
+	})
+	if err != nil {
+		lg.Log.Errorf("Error during registration process: %s", err.Error())
+		return
+	}
+
+	if resp.Success == false && resp.RedirectTarget != "" {
+		// remove non leaders from node list but only if they sent an alternative where to register
+		config.Default.RemoveNode(cl.Target)
+		client.ForceClientReconnect = true
+
+		// add redirection target if unknown
+		if !config.Default.KnowsNode(resp.RedirectTarget) {
+			config.Default.AddNode(resp.RedirectTarget)
+		}
+
+		// retry registration
+		lg.Log.Debugf("Got registration redirection")
+		leader, err := client.NewClient(resp.RedirectTarget)
+		if err != nil {
+			lg.Log.Errorf("Failed to reach redirection target: %s", err)
+		}
+
+		wg.Add(1)
+		go sendRegisterRequest(leader, wg, success, ctx)
+	} else if resp.Success == true {
+		lg.Log.Infof("Successfully registered at %s", cl.Target)
+	}
 }

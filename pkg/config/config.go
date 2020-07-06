@@ -59,6 +59,20 @@ func (c *Config) AddNode(target string) {
 	c.AllNodes = cli.NewStringSlice(nodes...)
 }
 
+// KnowsNode returns true if the given target exists in current node list
+func (c *Config) KnowsNode(target string) bool {
+	allNodeLock.Lock()
+	defer allNodeLock.Unlock()
+
+	for _, n := range c.AllNodes.Value() {
+		if n == target {
+			return true
+		}
+	}
+
+	return false
+}
+
 // RemoveNode deletes a node from the current node list
 func (c *Config) RemoveNode(target string) {
 	allNodeLock.Lock()
@@ -95,7 +109,7 @@ func (c *Config) HasNodesDiff(compare []string) bool {
 		}
 	}
 
-	return hasCount == len(current)
+	return hasCount != len(current)
 }
 
 // PeerNodeCount returns amount of peer nodes (this node exclusive)

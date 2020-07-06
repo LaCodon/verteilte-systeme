@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"github.com/LaCodon/verteilte-systeme/internal/state"
 	"github.com/LaCodon/verteilte-systeme/pkg/client"
 	"github.com/LaCodon/verteilte-systeme/pkg/lg"
@@ -11,6 +12,15 @@ import (
 // RequestVote gets called by a candidate for leader election
 func (s *Server) RequestVote(c context.Context, v *rpc.VoteRequest) (*rpc.VoteResponse, error) {
 	lg.Log.Debugf("Got vote request from %d with term %d", v.CandidateId, v.Term)
+
+	if !client.GetClientSet().HasClient(v.CandidateId) {
+		lg.Log.Debugf("Rejected vote request from %d because it's not part of known cluster", v.CandidateId)
+		return &rpc.VoteResponse{
+			Term:        state.DefaultPersistentState.GetCurrentTerm(),
+			VoteGranted: false,
+		}, fmt.Errorf("please register at the leader before requesting votes")
+	}
+
 	voteGranted := true
 
 	state.DefaultPersistentState.Mutex.Lock()
