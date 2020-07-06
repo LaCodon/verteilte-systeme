@@ -181,6 +181,7 @@ func Send(ctx context.Context) {
 					lg.Log.Debugf("error from Client.AppendEntries: %s", err)
 					c.ErrorCount++
 
+					// TODO: only kick if threashold over -1
 					if c.ErrorCount > config.Default.KickThreshold {
 						config.Default.RemoveNode(c.Target)
 						ForceClientReconnect = true
