@@ -35,6 +35,7 @@ func main() {
 				Usage:       "RPC server listen port",
 				EnvVars:     []string{"SMKVS_PORT"},
 				Value:       36000,
+				Required:    true,
 				Destination: &config.Default.LocalPort,
 			},
 			&cli.StringFlag{

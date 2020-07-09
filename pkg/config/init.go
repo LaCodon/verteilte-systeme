@@ -16,7 +16,7 @@ func init() {
 		RequestVoteTimeout:   500 * time.Millisecond,
 		AppendEntriesTimeout: 500 * time.Millisecond,
 		RegisterTimeout:      500 * time.Millisecond,
-		KickThreshold:        4,
+		KickThreshold:        120,
 	}
 }
 
