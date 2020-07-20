@@ -33,6 +33,8 @@ type Config struct {
 
 	// LogFile holds the filename where the log entries are saved
 	Logfile string
+	// LogFormatString defines the format in which the data is stored
+	LogFormatString string
 }
 
 // RandomizeHeartbeatTimeout sets a new random HeartbeatTimeout

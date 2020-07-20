@@ -37,13 +37,13 @@ func BeLeader(ctx context.Context) {
 
 	//read user Input
 	NewUserInput = make(chan *UserInput, 20)
-	go HandleUserInput()
+	go HandleUserInput(ctx)
 
 	Send(ctx)
 }
 
-func HandleUserInput() {
-	for {
+func HandleUserInput(ctx context.Context) {
+	for state.DefaultPersistentState.GetCurrentState() == state.Leader && ctx.Err() == nil{
 		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 		if err != nil {
 			lg.Log.Warning(err)

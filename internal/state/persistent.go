@@ -1,7 +1,15 @@
 package state
 
 import (
+	"fmt"
+	"github.com/LaCodon/verteilte-systeme/internal/helper"
+	"github.com/LaCodon/verteilte-systeme/pkg/config"
+	"github.com/LaCodon/verteilte-systeme/pkg/lg"
 	"github.com/LaCodon/verteilte-systeme/pkg/rpc"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"strings"
 )
 
 type NodeState int
@@ -83,8 +91,17 @@ func (s *PersistentState) SetCurrentTerm(t int32) {
 }
 
 func (s *PersistentState) AddToLogFragile(l ...*rpc.LogEntry) {
+	file, err := os.OpenFile(helper.GetLogFilePath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		lg.Log.Warningf("Error while opening file: %s", err)
+	}
+	defer file.Close()
+
 	for _, e := range l {
 		s.Log = append(s.Log, e)
+		if _, err := file.WriteString(fmt.Sprintf(config.Default.LogFormatString, e.Index, e.Term, e.Action, e.Key, e.Value)); err != nil {
+			lg.Log.Error(err)
+		}
 	}
 }
 
@@ -141,4 +158,65 @@ func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
 
 	// add all new elements
 	s.Log = append(s.Log, elements[firstNewElementIndex:]...)
+
+	// save log to file
+	data := ""
+	for _, e := range s.Log {
+		data += fmt.Sprintf(config.Default.LogFormatString, e.Index, e.Term, e.Action, e.Key, e.Value)
+	}
+	err := ioutil.WriteFile(helper.GetLogFilePath(), []byte(data), 0666)
+	if err != nil {
+		lg.Log.Errorf("Could not write log to file: %s", err)
+	}
+}
+
+func (s *PersistentState) InitLog() {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+
+	//read data from file
+	data, ioErr := ioutil.ReadFile(helper.GetLogFilePath())
+	if ioErr != nil {
+		lg.Log.Warningf("Error while reading file: %s", ioErr)
+	}
+
+	s.Log = []*rpc.LogEntry{}
+	//parse entries
+	entries := strings.Split(string(data), "\n")
+	for _, entry := range entries {
+		parts := strings.Fields(entry)
+
+		if len(parts) != 5 {
+			// format is not correct, ignoring line
+			continue
+		}
+
+		//parse integer values
+		index, err := strconv.Atoi(parts[0])
+		if err != nil {
+			lg.Log.Fatalf("could not initialize log! \"%s\" is no integer", parts[0])
+		}
+		term, err := strconv.Atoi(parts[1])
+		if err != nil {
+			lg.Log.Fatalf("could not initialize log! \"%s\" is no integer", parts[0])
+		}
+		action, err := strconv.Atoi(parts[2])
+		if err != nil {
+			lg.Log.Fatalf("could not initialize log! \"%s\" is no integer", parts[0])
+		}
+
+		//append entry to log
+		logEntry := &rpc.LogEntry{
+			Index:  int32(index),
+			Term:   int32(term),
+			Action: int32(action),
+			Key:    parts[3],
+			Value:  parts[4],
+		}
+		s.Log = append(s.Log, logEntry)
+	}
+
+	if len(s.Log) > 0 {
+		s.CurrentTerm = s.GetLastLogTermFragile();
+	}
 }
