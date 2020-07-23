@@ -27,7 +27,7 @@ type Config struct {
 	AppendEntriesTimeout time.Duration
 	// RegisterTimeout is the timeout for RegisterNode calls
 	RegisterTimeout time.Duration
-	// KickThreshold is the max amount of failed AppendEntries RPCs after a node gets kicked from the leader
+	// KickThreshold is the max amount of failed AppendEntries RPCs after a node gets kicked from the leader. Set to -1 to turn kicking off
 	KickThreshold int
 	NodeId        uint32
 
