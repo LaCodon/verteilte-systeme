@@ -37,7 +37,7 @@ func BeLeader(ctx context.Context) {
 
 	//read user Input
 	NewUserInput = make(chan *UserInput, 20)
-	go HandleUserInput(ctx)
+	//go HandleUserInput(ctx)
 
 	Send(ctx)
 }
@@ -76,7 +76,6 @@ func HandleUserInput(ctx context.Context) {
 						Var:    cmd[2],
 						Action: int32(action),
 					}
-					lg.Log.Debugf("-----------------send input---------------------------")
 				} else {
 					lg.Log.Warningf("Could not convert user input \"%s\" to action: %s", cmd[0], err)
 				}

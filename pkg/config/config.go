@@ -25,6 +25,8 @@ type Config struct {
 	RequestVoteTimeout time.Duration
 	// AppendEntriesTimeout sets the timeout for waiting on AppendEntries responses
 	AppendEntriesTimeout time.Duration
+	// UserRequestTimeout sets the timeout for waiting on UserRequest responses
+	UserRequestTimeout time.Duration
 	// RegisterTimeout is the timeout for RegisterNode calls
 	RegisterTimeout time.Duration
 	// KickThreshold is the max amount of failed AppendEntries RPCs after a node gets kicked from the leader

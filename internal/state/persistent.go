@@ -239,8 +239,15 @@ func (s *PersistentState) InitLog() {
 	}
 }
 
-func (s *PersistentState) GetCurrentStateMachineFragile() map[string]string {
-	var m map[string]string
+func (s *PersistentState) GetCurrentStorage() map[string]string {
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
+
+	return s.GetCurrentStorageFragile()
+}
+
+func (s *PersistentState) GetCurrentStorageFragile() map[string]string {
+	m := make(map[string]string)
 	for _, e := range s.Log {
 		if e.Action == 1 {
 			//SET
@@ -251,4 +258,30 @@ func (s *PersistentState) GetCurrentStateMachineFragile() map[string]string {
 		}
 	}
 	return m
+}
+
+func (s *PersistentState) GetCurrentValue(key string) (string, bool) {
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
+
+	return s.GetCurrentValueFragile(key)
+}
+
+func (s *PersistentState) GetCurrentValueFragile(key string) (string, bool) {
+	var value string
+	ok := false
+	for _, e := range s.Log {
+		if e.Key == key {
+			if e.Action == 1 {
+				//SET
+				value = e.Value
+				ok = true
+			} else if e.Action == 2 {
+				//DELETE
+				value = ""
+				ok = false
+			}
+		}
+	}
+	return value, ok
 }
