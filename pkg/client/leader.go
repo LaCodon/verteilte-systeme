@@ -209,9 +209,12 @@ func Send(ctx context.Context) {
 					state.DefaultLeaderState.MatchIndex[clientId] = newMatchIndex
 					state.DefaultLeaderState.Mutex.Unlock()
 
-					if successfulReplications > nodeCount/2 {
+					if successfulReplications > nodeCount/2 && CurrentLogIndex > state.DefaultVolatileState.GetCommitIndex() {
 						state.DefaultVolatileState.SetCommitIndex(CurrentLogIndex)
 						lg.Log.Debugf("Replicated log on the majority of the nodes, new commit index: %d", CurrentLogIndex)
+						lastApplied := state.DefaultVolatileState.GetLastApplied()
+						lastApplied = state.DefaultPersistentState.ApplyLogToStateMachine(lastApplied, CurrentLogIndex)
+						state.DefaultVolatileState.SetLastApplied(lastApplied)
 					}
 				} else {
 					if resp.Term > CurrentTerm {

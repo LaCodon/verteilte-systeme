@@ -28,6 +28,20 @@ func (s *VolatileState) GetCommitIndex() int32 {
 	return s.CommitIndex
 }
 
+func (s *VolatileState) GetLastApplied() int32 {
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
+
+	return s.LastApplied
+}
+
+func (s *VolatileState) SetLastApplied(i int32) {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+
+	s.LastApplied = i
+}
+
 func (s *VolatileState) GetCurrentLeader() string {
 	s.Mutex.RLock()
 	defer s.Mutex.RUnlock()

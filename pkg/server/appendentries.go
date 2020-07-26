@@ -52,7 +52,6 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	if len(ar.Entries) > 0 {
 		lg.Log.Infof("received log entries: %v", ar.Entries)
 		state.DefaultPersistentState.UpdateAndAppendLogFragile(ar.Entries)
-
 		if ar.LeaderCommit < ar.Entries[len(ar.Entries)-1].Index {
 			// sync with leader commit
 			state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
@@ -63,7 +62,12 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	} else {
 		state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
 	}
-	lg.Log.Debugf("new commit index: %d", state.DefaultVolatileState.GetCommitIndex())
+	commitIndex := state.DefaultVolatileState.GetCommitIndex()
+	lg.Log.Debugf("new commit index: %d", commitIndex)
+	lastApplied := state.DefaultVolatileState.GetLastApplied()
+	lg.Log.Debugf("applying log entries %d to %d to state machine.", lastApplied, commitIndex)
+	lastApplied = state.DefaultPersistentState.ApplyLogToStateMachineFragile(lastApplied, commitIndex)
+	state.DefaultVolatileState.SetLastApplied(lastApplied)
 
 	state.DefaultVolatileState.SetCurrentLeader(ar.LeaderTarget)
 
