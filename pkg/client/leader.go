@@ -37,13 +37,13 @@ func BeLeader(ctx context.Context) {
 
 	//read user Input
 	NewUserInput = make(chan *UserInput, 20)
-	go HandleUserInput()
+	//go HandleUserInput(ctx)
 
 	Send(ctx)
 }
 
-func HandleUserInput() {
-	for {
+func HandleUserInput(ctx context.Context) {
+	for state.DefaultPersistentState.GetCurrentState() == state.Leader && ctx.Err() == nil{
 		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 		if err != nil {
 			lg.Log.Warning(err)
@@ -76,7 +76,6 @@ func HandleUserInput() {
 						Var:    cmd[2],
 						Action: int32(action),
 					}
-					lg.Log.Debugf("-----------------send input---------------------------")
 				} else {
 					lg.Log.Warningf("Could not convert user input \"%s\" to action: %s", cmd[0], err)
 				}
@@ -209,9 +208,12 @@ func Send(ctx context.Context) {
 					state.DefaultLeaderState.MatchIndex[clientId] = newMatchIndex
 					state.DefaultLeaderState.Mutex.Unlock()
 
-					if successfulReplications > nodeCount/2 {
+					if successfulReplications > nodeCount/2 && CurrentLogIndex > state.DefaultVolatileState.GetCommitIndex() {
 						state.DefaultVolatileState.SetCommitIndex(CurrentLogIndex)
 						lg.Log.Debugf("Replicated log on the majority of the nodes, new commit index: %d", CurrentLogIndex)
+						lastApplied := state.DefaultVolatileState.GetLastApplied()
+						lastApplied = state.DefaultPersistentState.ApplyLogToStateMachine(lastApplied, CurrentLogIndex)
+						state.DefaultVolatileState.SetLastApplied(lastApplied)
 					}
 				} else {
 					if resp.Term > CurrentTerm {

@@ -25,6 +25,8 @@ type Config struct {
 	RequestVoteTimeout time.Duration
 	// AppendEntriesTimeout sets the timeout for waiting on AppendEntries responses
 	AppendEntriesTimeout time.Duration
+	// UserRequestTimeout sets the timeout for waiting on UserRequest responses
+	UserRequestTimeout time.Duration
 	// RegisterTimeout is the timeout for RegisterNode calls
 	RegisterTimeout time.Duration
 	// KickThreshold is the max amount of failed AppendEntries RPCs after a node gets kicked from the leader. Set to -1 to turn kicking off
@@ -33,6 +35,8 @@ type Config struct {
 
 	// LogFile holds the filename where the log entries are saved
 	Logfile string
+	// LogFormatString defines the format in which the data is stored
+	LogFormatString string
 }
 
 // RandomizeHeartbeatTimeout sets a new random HeartbeatTimeout

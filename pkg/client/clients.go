@@ -23,7 +23,7 @@ var defaultClientSet ClientSet
 var clientConnectMutex sync.Mutex
 
 // connectToNodes creates the default Client set and returns it
-func connectToNodes(ips []string) (cs ClientSet) {
+func ConnectToNodes(ips []string) (cs ClientSet) {
 	for _, c := range defaultClientSet {
 		if err := c.Connection.Close(); err != nil {
 			lg.Log.Warningf("Failed to close connection before reconnect")
@@ -62,7 +62,7 @@ func GetClientSet() (cs ClientSet) {
 
 	if ForceClientReconnect {
 		lg.Log.Infof("Force connection reestablishment")
-		connectToNodes(config.Default.GetPeerNodesData())
+		ConnectToNodes(config.Default.GetPeerNodesData())
 		ForceClientReconnect = false
 	}
 

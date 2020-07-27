@@ -33,6 +33,7 @@ func run(c *cli.Context) error {
 	}
 
 	config.Default.Logfile = fmt.Sprintf("log%d.txt", config.Default.NodeId)
+	state.DefaultPersistentState.InitLog()
 
 	// start as follower
 	state.DefaultPersistentState.SetCurrentState(state.Follower)

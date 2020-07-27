@@ -15,8 +15,10 @@ func init() {
 		HeartbeatTimeout:     generateRandomHeartbeatTimeout(),
 		RequestVoteTimeout:   500 * time.Millisecond,
 		AppendEntriesTimeout: 500 * time.Millisecond,
+		UserRequestTimeout:   500 * time.Millisecond,
 		RegisterTimeout:      500 * time.Millisecond,
 		KickThreshold:        -1,
+		LogFormatString: 	  "%d %d %d %s %s\n", // Index Term Action Key Value
 	}
 }
 

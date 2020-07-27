@@ -20,6 +20,7 @@ type NodeClient interface {
 	RequestVote(ctx context.Context, in *VoteRequest, opts ...grpc.CallOption) (*VoteResponse, error)
 	AppendEntries(ctx context.Context, in *AppendEntriesRequest, opts ...grpc.CallOption) (*AppendEntriesResponse, error)
 	RegisterNode(ctx context.Context, in *NodeRegisterRequest, opts ...grpc.CallOption) (*NodeRegisterResponse, error)
+	UserInteraction(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 }
 
 type nodeClient struct {
@@ -57,6 +58,15 @@ func (c *nodeClient) RegisterNode(ctx context.Context, in *NodeRegisterRequest, 
 	return out, nil
 }
 
+func (c *nodeClient) UserInteraction(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (*UserResponse, error) {
+	out := new(UserResponse)
+	err := c.cc.Invoke(ctx, "/smkvs.Node/UserInteraction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NodeServer is the server API for Node service.
 // All implementations must embed UnimplementedNodeServer
 // for forward compatibility
@@ -64,6 +74,7 @@ type NodeServer interface {
 	RequestVote(context.Context, *VoteRequest) (*VoteResponse, error)
 	AppendEntries(context.Context, *AppendEntriesRequest) (*AppendEntriesResponse, error)
 	RegisterNode(context.Context, *NodeRegisterRequest) (*NodeRegisterResponse, error)
+	UserInteraction(context.Context, *UserRequest) (*UserResponse, error)
 	mustEmbedUnimplementedNodeServer()
 }
 
@@ -79,6 +90,9 @@ func (*UnimplementedNodeServer) AppendEntries(context.Context, *AppendEntriesReq
 }
 func (*UnimplementedNodeServer) RegisterNode(context.Context, *NodeRegisterRequest) (*NodeRegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterNode not implemented")
+}
+func (*UnimplementedNodeServer) UserInteraction(context.Context, *UserRequest) (*UserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UserInteraction not implemented")
 }
 func (*UnimplementedNodeServer) mustEmbedUnimplementedNodeServer() {}
 
@@ -140,6 +154,24 @@ func _Node_RegisterNode_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Node_UserInteraction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServer).UserInteraction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/smkvs.Node/UserInteraction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServer).UserInteraction(ctx, req.(*UserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Node_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "smkvs.Node",
 	HandlerType: (*NodeServer)(nil),
@@ -155,6 +187,10 @@ var _Node_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterNode",
 			Handler:    _Node_RegisterNode_Handler,
+		},
+		{
+			MethodName: "UserInteraction",
+			Handler:    _Node_UserInteraction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
