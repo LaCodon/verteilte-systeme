@@ -19,20 +19,11 @@ func main() {
 		Usage:       "Schmidt-Maier-Key-Value-Store",
 		Version:     Version,
 		Description: "Distributed Key Value Store based on the raft algorithm",
-		Action:      run,
-		Flags: []cli.Flag{
-			&cli.StringSliceFlag{
-				Name:        "peer-ip",
-				Aliases:     []string{"i"},
-				Usage:       "Peer IPs and Ports in",
-				EnvVars:     []string{"SMKVS_PEER_NODES"},
-				Required:    true,
-				Destination: config.Default.AllNodes,
 		Commands: []*cli.Command{
 			{
-				Name: "run",
-				Usage: "Run a smkvs node",
-				Action:      run,
+				Name:   "run",
+				Usage:  "Run a smkvs node",
+				Action: run,
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{
 						Name:        "peer-ip",
@@ -61,17 +52,9 @@ func main() {
 					},
 				},
 			},
-			&cli.IntFlag{
-				Name:        "local-port",
-				Aliases:     []string{"p"},
-				Usage:       "RPC server listen port",
-				EnvVars:     []string{"SMKVS_PORT"},
-				Value:       36000,
-				Destination: &config.Default.LocalPort,
-
 			{
-				Name: "set",
-				Usage: "Store a new key value pair",
+				Name:   "set",
+				Usage:  "Store a new key value pair",
 				Action: setKVPair,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -85,29 +68,21 @@ func main() {
 						Name:        "key",
 						Aliases:     []string{"k"},
 						Usage:       "Value is stored to this key",
-						Required:	 true,
+						Required:    true,
 						Destination: &userInput.Key,
 					},
 					&cli.StringFlag{
 						Name:        "value",
 						Aliases:     []string{"v"},
 						Usage:       "Value to be stored",
-						Required:	 true,
+						Required:    true,
 						Destination: &userInput.Var,
 					},
 				},
 			},
-			&cli.StringFlag{
-				Name:        "listen",
-				Aliases:     []string{"l"},
-				Usage:       "External listener IP and Port for current node",
-				EnvVars:     []string{"SMKVS_NODE_LISTEN"},
-				Required:    true,
-				Value:       "127.0.0.1:36000",
-				Destination: &config.Default.MyNode,
 			{
-				Name: "delete",
-				Usage: "Delete a stored key value pair",
+				Name:   "delete",
+				Usage:  "Delete a stored key value pair",
 				Action: deleteKVPair,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -121,14 +96,14 @@ func main() {
 						Name:        "key",
 						Aliases:     []string{"k"},
 						Usage:       "Value is stored to this key",
-						Required:	 true,
+						Required:    true,
 						Destination: &userInput.Key,
 					},
 				},
 			},
 			{
-				Name: "get",
-				Usage: "Get all current key value pairs stored in the system.",
+				Name:   "get",
+				Usage:  "Get all current key value pairs stored in the system.",
 				Action: getStorage,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
