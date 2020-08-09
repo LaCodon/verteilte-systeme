@@ -20,6 +20,12 @@ if [ $action != "2" ]; then
 	fi
 fi
 
-output="$(dirname "$0")/../userInput/input.txt"
-	
-echo "$action $key $val" >> $output
+IP="10.0.0.11:36000"
+
+if [ $action == "2" ]; then
+  action="delete"
+elif [ $action == "1" ]; then
+  action="set"
+fi
+
+exec ./bin/smkvs $action -i $IP -k $1 -v $2
