@@ -15,23 +15,24 @@ const (
 )
 
 func (s *Server) UserInteraction(c context.Context, ur *rpc.UserRequest) (*rpc.UserResponse, error) {
+	// check for valid action
+	if ur.RequestCode == UserRequestStore && (ur.Action < 1 || ur.Action > 2){
+		return &rpc.UserResponse{
+			ResponseCode: 400,
+		}, errors.New("invalid action")
+	}
+
+	// redirect to current leader
+	if state.DefaultPersistentState.GetCurrentState() != state.Leader {
+		return &rpc.UserResponse{
+			ResponseCode: 301,
+			RedirectTo: state.DefaultVolatileState.GetCurrentLeader(),
+		}, nil
+	}
+
+	//handle action
 	if ur.RequestCode == UserRequestStore {
 		//user wants to store a new value
-
-		// check for valid action
-		if ur.Action < 1 || ur.Action > 2{
-			return &rpc.UserResponse{
-				ResponseCode: 400,
-			}, errors.New("invalid action")
-		}
-
-		// redirect to current leader
-		if state.DefaultPersistentState.GetCurrentState() != state.Leader {
-			return &rpc.UserResponse{
-				ResponseCode: 301,
-				RedirectTo: state.DefaultVolatileState.GetCurrentLeader(),
-			}, nil
-		}
 
 		//send new input to channel
 		client.NewUserInput <- &client.UserInput{
