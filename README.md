@@ -13,6 +13,8 @@ See https://github.com/golang-standards/project-layout
 
 ## Build
 
+The application is written in Go 1.14.
+
 ### Protocol Buffer Definitions
 
 Make sure you have installed protocol buffers as described here: 
@@ -20,6 +22,11 @@ https://developers.google.com/protocol-buffers/docs/gotutorial#compiling-your-pr
 
 Then run `make proto` to build the definitions from the `/proto` directory
 (don't forget to extend the Makefile if you add new definitions).
+
+### Binary
+
+The application can be build be running `make build`. The output binary
+can then be found in `bin/smkvs` (Linux 64 bit binary).
 
 ## Test environment
 
