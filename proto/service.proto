@@ -50,10 +50,9 @@ message NodeRegisterResponse {
 }
 
 message UserRequest {
-  int32 requestCode = 1; // 1: new Entry; 2: get current state of <key>; 3: get current state of all
-  int32 action = 2;
-  string key = 3;
-  string value = 4;
+  int32 requestCode = 1; // 1: new Entry; 2: delete entry; 3: get current state of <key>; 4: get current state of all
+  string key = 2;
+  string value = 3;
 }
 
 message UserResponse {

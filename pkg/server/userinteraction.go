@@ -9,19 +9,13 @@ import (
 )
 
 const (
-	UserRequestStore int32 = 1
-	UserRequestGetAll int32 = 2
-	UserRequestGetOne int32 = 3
+	UserRequestSet int32 = 1
+	UserRequestDelete int32 = 2
+	UserRequestGetAll int32 = 3
+	UserRequestGetOne int32 = 4
 )
 
 func (s *Server) UserInteraction(c context.Context, ur *rpc.UserRequest) (*rpc.UserResponse, error) {
-	// check for valid action
-	if ur.RequestCode == UserRequestStore && (ur.Action < 1 || ur.Action > 2){
-		return &rpc.UserResponse{
-			ResponseCode: 400,
-		}, errors.New("invalid action")
-	}
-
 	// redirect to current leader
 	if state.DefaultPersistentState.GetCurrentState() != state.Leader {
 		return &rpc.UserResponse{
@@ -31,14 +25,19 @@ func (s *Server) UserInteraction(c context.Context, ur *rpc.UserRequest) (*rpc.U
 	}
 
 	//handle action
-	if ur.RequestCode == UserRequestStore {
+	if ur.RequestCode == UserRequestSet || ur.RequestCode == UserRequestDelete{
 		//user wants to store a new value
-
+		var action int32
+		if ur.RequestCode == UserRequestSet {
+			action = 1
+		} else {
+			action = 2
+		}
 		//send new input to channel
 		client.NewUserInput <- &client.UserInput{
 			Key:    ur.Key,
 			Var:    ur.Value,
-			Action: ur.Action,
+			Action: action,
 		}
 
 		return &rpc.UserResponse{

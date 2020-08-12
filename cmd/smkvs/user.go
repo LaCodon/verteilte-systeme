@@ -25,13 +25,11 @@ func init(){
 }
 
 func setKVPair (c *cli.Context) error {
-	userInput.Action = 1
-	return sendRPC(server.UserRequestStore)
+	return sendRPC(server.UserRequestSet)
 }
 
 func deleteKVPair (c *cli.Context) error {
-	userInput.Action = 2
-	return sendRPC(server.UserRequestStore)
+	return sendRPC(server.UserRequestDelete)
 }
 
 func getStorage (c *cli.Context) error {
@@ -45,7 +43,6 @@ func getStorage (c *cli.Context) error {
 func sendRPC(requestCode int32) error{
 	req := &rpc.UserRequest{
 		RequestCode: requestCode,
-		Action:      userInput.Action,
 		Key:         userInput.Key,
 		Value:       userInput.Var,
 	}
