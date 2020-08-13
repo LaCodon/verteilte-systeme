@@ -60,8 +60,6 @@ func (s *PersistentState) GetLastLogTermFragile() int32 {
 }
 
 func (s *PersistentState) ContainsLogElementFragile(index int32, term int32) bool {
-	lg.Log.Debugf("current log: %s", s.Log)
-
 	if index == -1 {
 		return true
 	}

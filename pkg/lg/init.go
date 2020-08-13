@@ -14,7 +14,7 @@ func init() {
 	stdOutFormatted := logging.NewBackendFormatter(stdOut, format)
 
 	logging.SetBackend(stdOutFormatted)
-	logging.SetLevel(logging.DEBUG, "")
+	logging.SetLevel(logging.INFO, "")
 
 	Log = logging.MustGetLogger("smkvs")
 }
