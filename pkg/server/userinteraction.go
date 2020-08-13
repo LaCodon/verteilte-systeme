@@ -68,4 +68,3 @@ func (s *Server) UserInteraction(c context.Context, ur *rpc.UserRequest) (*rpc.U
 		}, errors.New("invalid RequestCode")
 	}
 }
-
