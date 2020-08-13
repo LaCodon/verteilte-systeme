@@ -37,11 +37,6 @@ Function Unplug($nodeX)
 # Writes a key to ne cluster
 Function SetKey($key, $value, $target)
 {
-    if ($target -eq "")
-    {
-        $target = 1
-    }
-
     $port = $target - 1
 
     # node6 is client node
@@ -51,11 +46,6 @@ Function SetKey($key, $value, $target)
 # Gets all values from the cluster
 Function GetAllValues($target)
 {
-    if ($target -eq "")
-    {
-        $target = 1
-    }
-
     $port = $target - 1
 
     # node6 is client node

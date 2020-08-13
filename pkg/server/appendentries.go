@@ -30,6 +30,8 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	// send heartbeat to other go routines
 	client.Heartbeat <- true
 
+	state.DefaultVolatileState.SetCurrentLeader(ar.LeaderTarget)
+
 	if config.Default.HasNodesDiff(ar.AllNodes) {
 		// save new peer node information
 		config.Default.SetNewNodes(ar.AllNodes)
@@ -51,6 +53,15 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	// update log
 	if len(ar.Entries) > 0 {
 		lg.Log.Infof("received log entries: %v", ar.Entries)
+
+		if state.DefaultPersistentState.GetLastLogIndexFragile()+1 < ar.Entries[0].Index {
+			lg.Log.Debugf("Ignored AppendEntries for index %d because i'm missing older entries", ar.LeaderCommit)
+			return &rpc.AppendEntriesResponse{
+				Term:    state.DefaultPersistentState.CurrentTerm,
+				Success: false,
+			}, nil
+		}
+
 		state.DefaultPersistentState.UpdateAndAppendLogFragile(ar.Entries)
 		if ar.LeaderCommit < ar.Entries[len(ar.Entries)-1].Index {
 			// sync with leader commit
@@ -60,7 +71,15 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 			state.DefaultVolatileState.SetCommitIndex(ar.Entries[len(ar.Entries)-1].Index)
 		}
 	} else {
-		state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
+		if state.DefaultPersistentState.GetLastLogIndexFragile() >= ar.LeaderCommit {
+			state.DefaultVolatileState.SetCommitIndex(ar.LeaderCommit)
+		} else {
+			lg.Log.Debugf("Don't commit entries for index %d because i'm missing the entries", ar.LeaderCommit)
+			return &rpc.AppendEntriesResponse{
+				Term:    state.DefaultPersistentState.CurrentTerm,
+				Success: false,
+			}, nil
+		}
 	}
 	commitIndex := state.DefaultVolatileState.GetCommitIndex()
 	lg.Log.Debugf("new commit index: %d", commitIndex)
@@ -68,8 +87,6 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	lg.Log.Debugf("applying log entries %d to %d to state machine.", lastApplied, commitIndex)
 	lastApplied = state.DefaultPersistentState.ApplyLogToStateMachineFragile(lastApplied, commitIndex)
 	state.DefaultVolatileState.SetLastApplied(lastApplied)
-
-	state.DefaultVolatileState.SetCurrentLeader(ar.LeaderTarget)
 
 	return &rpc.AppendEntriesResponse{
 		Term:    state.DefaultPersistentState.CurrentTerm,

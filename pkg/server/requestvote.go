@@ -42,6 +42,11 @@ func (s *Server) RequestVote(c context.Context, v *rpc.VoteRequest) (*rpc.VoteRe
 			lg.Log.Debug("Reset connection backoff")
 			client.GetClientSet().ResetBackoff()
 		}
+
+		if state.DefaultPersistentState.CurrentTerm < v.Term {
+			state.DefaultPersistentState.CurrentTerm = v.Term
+			state.DefaultPersistentState.CurrentSate = state.Follower
+		}
 	} else {
 		// elect and update self
 		voteGranted = true

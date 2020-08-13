@@ -215,9 +215,11 @@ func Send(ctx context.Context) {
 						state.DefaultVolatileState.SetLastApplied(lastApplied)
 					}
 				} else {
+					lg.Log.Debug("Got unsuccessful AppendEntries response")
 					if resp.Term > CurrentTerm {
-						state.DefaultPersistentState.SetCurrentTerm(resp.Term)
+						lg.Log.Debug("Convert to follower")
 						state.DefaultPersistentState.SetCurrentState(state.Follower)
+						state.DefaultPersistentState.SetCurrentTerm(resp.Term)
 					} else {
 						state.DefaultLeaderState.Mutex.Lock()
 						if state.DefaultLeaderState.NextIndex[clientId] > 1 {

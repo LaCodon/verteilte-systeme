@@ -60,6 +60,8 @@ func (s *PersistentState) GetLastLogTermFragile() int32 {
 }
 
 func (s *PersistentState) ContainsLogElementFragile(index int32, term int32) bool {
+	lg.Log.Debugf("current log: %s", s.Log)
+
 	if index == -1 {
 		return true
 	}
@@ -134,6 +136,8 @@ func (s *PersistentState) GetLogLength() int {
 
 // UpdateAndAppendLogFragile removes all invalid elements and appends the new received ones
 func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
+	lg.Log.Debugf("old log: %s", s.Log)
+
 	firstNewElementIndex := 0
 
 	// remove all inconsistent elements
@@ -144,7 +148,7 @@ func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
 				s.Log = s.Log[:element.Index]
 				break
 			} else {
-				firstNewElementIndex = i+1
+				firstNewElementIndex = i + 1
 			}
 		}
 	}
@@ -154,6 +158,8 @@ func (s *PersistentState) UpdateAndAppendLogFragile(elements []*rpc.LogEntry) {
 		lg.Log.Debugf("Adding following entries to log: %v", elements[firstNewElementIndex:])
 		s.Log = append(s.Log, elements[firstNewElementIndex:]...)
 	}
+
+	lg.Log.Debugf("new log: %s", s.Log)
 }
 func (s *PersistentState) ApplyLogToStateMachine(lastApplied int32, commitIndex int32) int32 {
 	s.Mutex.Lock()
@@ -169,11 +175,11 @@ func (s *PersistentState) ApplyLogToStateMachineFragile(lastApplied int32, commi
 	}
 	defer file.Close()
 
-	for i:=int32(0); i<=commitIndex; i++ {
-		if s.Log[i].Index <= lastApplied{
+	for i := int32(0); i <= commitIndex; i++ {
+		if s.Log[i].Index <= lastApplied {
 			continue
 		}
-		lg.Log.Debugf("Writing log entry to file: " + config.Default.LogFormatString, s.Log[i].Index, s.Log[i].Term, s.Log[i].Action, s.Log[i].Key, s.Log[i].Value)
+		lg.Log.Debugf("Writing log entry to file: "+config.Default.LogFormatString, s.Log[i].Index, s.Log[i].Term, s.Log[i].Action, s.Log[i].Key, s.Log[i].Value)
 		_, err := file.WriteString(fmt.Sprintf(config.Default.LogFormatString, s.Log[i].Index, s.Log[i].Term, s.Log[i].Action, s.Log[i].Key, s.Log[i].Value))
 		if err != nil {
 			lg.Log.Error(err)
@@ -198,7 +204,7 @@ func (s *PersistentState) InitLog() {
 	//parse entries
 	entries := strings.Split(string(data), "\n")
 	for _, entry := range entries {
-		lg.Log.Debugf("Loading log entry: %s",  entry)
+		lg.Log.Debugf("Loading log entry: %s", entry)
 		parts := strings.Fields(entry)
 
 		if len(parts) != 5 {
