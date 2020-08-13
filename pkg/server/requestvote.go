@@ -35,7 +35,7 @@ func (s *Server) RequestVote(c context.Context, v *rpc.VoteRequest) (*rpc.VoteRe
 		// check if the requesting node has an outdated term
 		state.DefaultPersistentState.GetLastLogTermFragile() > v.LastLogTerm {
 		voteGranted = false
-		lg.Log.Infof("Denied vote request from %d in term %d", v.CandidateId, v.Term)
+		lg.Log.Infof("Denied vote request from %d in term %d with LastLogIndex %d and LastLogTerm %d", v.CandidateId, v.Term, v.LastLogIndex, v.LastLogTerm)
 
 		if state.DefaultPersistentState.CurrentSate == state.Leader {
 			// got message from client, reset connection backoff
@@ -47,7 +47,7 @@ func (s *Server) RequestVote(c context.Context, v *rpc.VoteRequest) (*rpc.VoteRe
 		voteGranted = true
 		candidateId := v.CandidateId
 		state.DefaultPersistentState.UpdateFragile(state.Follower, v.Term, &candidateId)
-		lg.Log.Infof("Voted for %d in term %d", v.CandidateId, v.Term)
+		lg.Log.Infof("Voted for %d in term %d with LastLogIndex %d and LastLogTerm %d", v.CandidateId, v.Term, v.LastLogIndex, v.LastLogTerm)
 	}
 
 	return &rpc.VoteResponse{

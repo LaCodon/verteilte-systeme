@@ -11,12 +11,12 @@ func init() {
 	lg.Log.Debug("Initializing config")
 	Default = &Config{
 		AllNodes:             cli.NewStringSlice(),
-		HeartbeatInterval:    900 * time.Millisecond,
+		HeartbeatInterval:    600 * time.Millisecond,
 		HeartbeatTimeout:     generateRandomHeartbeatTimeout(),
 		RequestVoteTimeout:   500 * time.Millisecond,
 		AppendEntriesTimeout: 500 * time.Millisecond,
 		UserRequestTimeout:   500 * time.Millisecond,
-		RegisterTimeout:      500 * time.Millisecond,
+		RegisterTimeout:      2 * time.Second,
 		KickThreshold:        -1,
 		LogFormatString: 	  "%d %d %d %s %s\n", // Index Term Action Key Value
 	}

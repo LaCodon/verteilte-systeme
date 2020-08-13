@@ -14,7 +14,7 @@ func (s *Server) AppendEntries(c context.Context, ar *rpc.AppendEntriesRequest) 
 	lg.Log.Debugf("Got heartbeat with term %d", ar.Term)
 
 	if state.DefaultPersistentState.GetCurrentTerm() > ar.Term {
-		lg.Log.Debugf("Ignored heartbeat because it had outdated term")
+		lg.Log.Infof("Ignored heartbeat because it had outdated term")
 		return &rpc.AppendEntriesResponse{
 			Term:    state.DefaultPersistentState.GetCurrentTerm(),
 			Success: false,

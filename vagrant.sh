@@ -26,3 +26,18 @@ echo "export NODE_ID=${node_id}" >>"$HOMEPATH/.bashrc"
   echo '# Automatically change to the vagrant dir'
   echo 'cd /vagrant'
 } >>"$HOMEPATH/.bashrc"
+
+{
+  echo '[Unit]'
+  echo 'Description=SMKVS node'
+
+  echo '[Service]'
+  echo "ExecStart=/bin/bash scripts/run.sh ${node_id}"
+  echo 'WorkingDirectory=/vagrant'
+  echo 'StandardOutput=inherit'
+  echo 'StandardError=inherit'
+  echo 'User=vagrant'
+
+  echo '[Install]'
+  echo 'WantedBy=multi-user.target'
+} >>/etc/systemd/system/smkvs.service

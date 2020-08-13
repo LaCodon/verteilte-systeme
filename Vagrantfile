@@ -3,7 +3,7 @@
 
 Vagrant.configure("2") do |config|
 
-    (1..5).each do |i|
+    (1..6).each do |i|
         config.vm.define "smkvs-node-#{i}" do |node|
             node.vm.box = "hashicorp/bionic64"
             node.vm.network "private_network", ip: "10.0.0.1#{i}"

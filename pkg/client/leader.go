@@ -43,7 +43,7 @@ func BeLeader(ctx context.Context) {
 }
 
 func HandleUserInput(ctx context.Context) {
-	for state.DefaultPersistentState.GetCurrentState() == state.Leader && ctx.Err() == nil{
+	for state.DefaultPersistentState.GetCurrentState() == state.Leader && ctx.Err() == nil {
 		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 		if err != nil {
 			lg.Log.Warning(err)
@@ -170,18 +170,17 @@ func Send(ctx context.Context) {
 				clientId := c.GetId()
 
 				if len(entriesToSend) == 0 {
-					lg.Log.Debugf("sending heartbeat to node %d", clientId)
+					lg.Log.Infof("sending heartbeat to node %d", clientId)
 				} else {
-					lg.Log.Debugf("sending entries to node %d with prevIdx %d and prevTerm %d: %v", clientId, prevLogIndex, prevLogTerm, entriesToSend)
+					lg.Log.Infof("sending entries to node %d with prevIdx %d and prevTerm %d: %v", clientId, prevLogIndex, prevLogTerm, entriesToSend)
 				}
 				appendCtx, _ := context.WithTimeout(parentCtx, config.Default.AppendEntriesTimeout)
 				resp, err := c.NodeClient.AppendEntries(appendCtx, r)
 				if err != nil {
-					lg.Log.Debugf("error from Client.AppendEntries: %s", err)
+					lg.Log.Errorf("error from Client.AppendEntries: %s", err)
 					c.ErrorCount++
 
-					// TODO: only kick if threashold over -1
-					if c.ErrorCount > config.Default.KickThreshold {
+					if config.Default.KickThreshold != -1 && c.ErrorCount > config.Default.KickThreshold {
 						config.Default.RemoveNode(c.Target)
 						ForceClientReconnect = true
 						lg.Log.Warningf("removed node %s from cluster", c.Target)
@@ -217,6 +216,7 @@ func Send(ctx context.Context) {
 					}
 				} else {
 					if resp.Term > CurrentTerm {
+						state.DefaultPersistentState.SetCurrentTerm(resp.Term)
 						state.DefaultPersistentState.SetCurrentState(state.Follower)
 					} else {
 						state.DefaultLeaderState.Mutex.Lock()

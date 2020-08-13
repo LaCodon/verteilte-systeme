@@ -15,12 +15,16 @@ StartNode -nodeX 2
 StartNode -nodeX 3
 StartNode -nodeX 4
 
+SetKey -key x -value 1
+
 Start-Sleep 5
 Write-Output "Unplugging node 4"
 
 # disconnect node 4
-Unplug -nodeX 4
+Disconnect -nodeX 4 -nodeY "1 2 3 5"
 Start-Sleep 5
+
+SetKey -key x -value 2
 
 Write-Output "Start new node"
 
@@ -29,7 +33,17 @@ StartNode -nodeX 5
 
 Start-Sleep 10
 
+SetKey -key x -value 3
+
 Write-Output "Replug node 4"
 
 # reconnect node 4
-Plug -nodeX 4
+Connect -nodeX 4 -nodeY "1 2 3 5"
+
+Start-Sleep 5
+
+SetKey -key x -value 5
+
+Start-Sleep 5
+
+GetAllValues
