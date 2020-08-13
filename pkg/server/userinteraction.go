@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	UserRequestSet int32 = 1
+	UserRequestSet    int32 = 1
 	UserRequestDelete int32 = 2
 	UserRequestGetAll int32 = 3
 	UserRequestGetOne int32 = 4
@@ -20,12 +20,12 @@ func (s *Server) UserInteraction(c context.Context, ur *rpc.UserRequest) (*rpc.U
 	if state.DefaultPersistentState.GetCurrentState() != state.Leader {
 		return &rpc.UserResponse{
 			ResponseCode: 301,
-			RedirectTo: state.DefaultVolatileState.GetCurrentLeader(),
+			RedirectTo:   state.DefaultVolatileState.GetCurrentLeader(),
 		}, nil
 	}
 
 	//handle action
-	if ur.RequestCode == UserRequestSet || ur.RequestCode == UserRequestDelete{
+	if ur.RequestCode == UserRequestSet || ur.RequestCode == UserRequestDelete {
 		//user wants to store a new value
 		var action int32
 		if ur.RequestCode == UserRequestSet {
@@ -47,7 +47,7 @@ func (s *Server) UserInteraction(c context.Context, ur *rpc.UserRequest) (*rpc.U
 		// user wants all data
 		return &rpc.UserResponse{
 			ResponseCode: 200,
-			Data: state.DefaultPersistentState.GetCurrentStorage(),
+			Data:         state.DefaultPersistentState.GetCurrentStorage(),
 		}, nil
 	} else if ur.RequestCode == UserRequestGetOne {
 		// user wants only current value of key
@@ -59,7 +59,7 @@ func (s *Server) UserInteraction(c context.Context, ur *rpc.UserRequest) (*rpc.U
 		}
 		return &rpc.UserResponse{
 			ResponseCode: 200,
-			Data: m,
+			Data:         m,
 		}, nil
 	} else {
 		// invalid request code
