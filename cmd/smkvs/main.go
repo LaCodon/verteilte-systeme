@@ -124,7 +124,6 @@ func main() {
 		},
 		Authors: []*cli.Author{
 			{Name: "Fabian Maier", Email: "fabian.maier@fh-erfurt.de"},
-			{Name: "Tim Schmidt", Email: "tim.schmidt@fh-erfurt.de"},
 			{Name: "Tim Schmidt", Email: "tim.schmidt.1@fh-erfurt.de"},
 		},
 	}
